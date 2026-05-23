@@ -72,23 +72,28 @@ For `arrow`, the arrowhead inherits the line's `color` automatically.
 All point arguments accept either `[x, y]` or `{x, y}`. The two forms are
 interchangeable and may be mixed in the same call.
 
-### `line(p1, p2, opts={})`
+### `line(p1, p2, ..., pN, opts={})`
 
-Straight line with rounded caps.
+Straight line with rounded caps for `N=2`; polyline (connected segments
+with rounded joins) for `N>2`. Needs at least 2 points.
 
-| Option      | Default   | Meaning                                                                                                |
-| ----------- | --------- | ------------------------------------------------------------------------------------------------------ |
-| `thickness` | `1`       | Stroke width.                                                                                          |
-| `color`     | `"black"` | Stroke color.                                                                                          |
-| `halfplane` | none      | If set to a halfplane options object, also draws `halfplane(p1, p2, opts.halfplane)` for this line.    |
+| Option      | Default   | Meaning                                                                                                       |
+| ----------- | --------- | ------------------------------------------------------------------------------------------------------------- |
+| `thickness` | `1`       | Stroke width.                                                                                                 |
+| `color`     | `"black"` | Stroke color.                                                                                                 |
+| `halfplane` | none      | Only honored when `N=2`. Draws `halfplane(p1, p2, opts.halfplane)` for the single segment. Ignored otherwise. |
 
 ```js
+// straight line
 line([0, 0], [5, 5]);
 line([0, 0], [5, 5], { thickness: 2 });
 line({ x: 0, y: 0 }, { x: 5, y: 5 }, { color: "#0044aa", thickness: 2 });
 
-// line + halfplane in one call
+// line + halfplane in one call (only with two points)
 line(Z, C2, { thickness: 1, halfplane: { position: 0.9, angle: 135 } });
+
+// polyline through any number of points
+line([0, 0], [2, 3], [4, 1], [6, 4], [8, 2], { thickness: 2 });
 ```
 
 ### `arrow(p1, p2, opts={})`

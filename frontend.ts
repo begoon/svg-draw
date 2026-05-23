@@ -170,22 +170,39 @@ function makeApi(ctx: DrawCtx, state: DrawState) {
   }
 
   const api = {
-    // line(p1, p2, opts)
+    // line(p1, p2, ..., pN, opts?) — straight line for N=2, polyline for N>2.
     //   opts.thickness: stroke width, raw px (default 1)
     //   opts.color:     stroke color (default "black")
-    //   opts.halfplane: if set, also draw halfplane strokes on this line.
-    line(
-      p1: Pt,
-      p2: Pt,
-      opts: StrokeOpts & { halfplane?: HalfplaneOpts } = {}
-    ) {
-      const [x1, y1] = pt(p1), [x2, y2] = pt(p2);
+    //   opts.halfplane: only honored when N=2; ignored for polylines.
+    line(...args: any[]) {
+      let opts: StrokeOpts & { halfplane?: HalfplaneOpts } = {};
+      const tail = args[args.length - 1];
+      if (tail !== undefined && !isPt(tail) && typeof tail === "object") {
+        opts = args.pop();
+      }
+      if (args.length < 2) {
+        throw new Error("line needs at least 2 points");
+      }
+      const pts2: [number, number][] = args.map((p) => {
+        if (!isPt(p)) throw new Error("line expects points as [x,y] or {x,y}");
+        return pt(p);
+      });
       const t = opts.thickness ?? 1;
       const c = opts.color ?? stroke;
-      ctx.parts.push(
-        `<line x1="${tx(x1)}" y1="${tx(y1)}" x2="${tx(x2)}" y2="${tx(y2)}" stroke="${esc(c)}" stroke-width="${t}" stroke-linecap="round" />`
-      );
-      if (opts.halfplane) emitHalfplane(x1, y1, x2, y2, opts.halfplane);
+      if (pts2.length === 2) {
+        const [[x1, y1], [x2, y2]] = pts2;
+        ctx.parts.push(
+          `<line x1="${tx(x1)}" y1="${tx(y1)}" x2="${tx(x2)}" y2="${tx(y2)}" stroke="${esc(c)}" stroke-width="${t}" stroke-linecap="round" />`
+        );
+        if (opts.halfplane) emitHalfplane(x1, y1, x2, y2, opts.halfplane);
+      } else {
+        const ptsStr = pts2
+          .map(([x, y]) => `${tx(x)},${tx(y)}`)
+          .join(" ");
+        ctx.parts.push(
+          `<polyline points="${ptsStr}" stroke="${esc(c)}" stroke-width="${t}" fill="none" stroke-linecap="round" stroke-linejoin="round" />`
+        );
+      }
     },
     // arrow(p1, p2, opts) — line with arrowhead at p2. Arrowhead color
     // inherits opts.color.
