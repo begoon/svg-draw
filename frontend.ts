@@ -497,13 +497,26 @@ function loadFiles(): FilesState {
       ) return v as FilesState;
     } catch {}
   }
-  // Migrate from the old single-doc key, if present.
+  // Migrate from the old single-doc key, if present. Write the new key
+  // BEFORE removing the old one so an unexpected error in between
+  // doesn't lose the content. Also keep a one-shot backup copy.
   const legacy = localStorage.getItem(STORAGE_KEY);
   if (legacy != null) {
+    const migrated: FilesState = {
+      files: { "main.js": legacy },
+      active: "main.js",
+    };
+    localStorage.setItem(FILES_KEY, JSON.stringify(migrated));
+    localStorage.setItem("svg-draw:code.backup", legacy);
     localStorage.removeItem(STORAGE_KEY);
-    return { files: { "main.js": legacy }, active: "main.js" };
+    return migrated;
   }
-  return { files: { "main.js": STARTER }, active: "main.js" };
+  const fresh: FilesState = {
+    files: { "main.js": STARTER },
+    active: "main.js",
+  };
+  localStorage.setItem(FILES_KEY, JSON.stringify(fresh));
+  return fresh;
 }
 
 function saveFiles() {
