@@ -18,8 +18,9 @@ Open <http://localhost:3000>.
 ## Editor features
 
 - Multi-file tabs (each tab is a `.js` file with a unique name). Click a tab
-  to switch, click `+` to create a new file, `×` to close one, double-click
-  the tab label to rename. The active tab is what renders to SVG.
+  to switch, click `+` to create a new file, `×` to close one, click `✎`
+  (or double-click the tab label) to rename. The active tab is what renders
+  to SVG.
 - Every keystroke persists all tabs to `localStorage`. Re-render of the
   active tab is debounced ~200 ms.
 - Invalid JS shows an error in the status bar; the last good SVG stays on
