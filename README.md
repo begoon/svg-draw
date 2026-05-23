@@ -64,12 +64,25 @@ For `arrow`, the arrowhead inherits the line's `color` automatically.
 
 ### `line(x1, y1, x2, y2, opts={})`
 
-Straight line with rounded caps. Accepts `thickness`, `color`.
+Straight line with rounded caps. Accepts `thickness`, `color`, and an
+optional `halfplane` shortcut.
+
+| Option      | Default   | Meaning                                                                                                       |
+| ----------- | --------- | ------------------------------------------------------------------------------------------------------------- |
+| `thickness` | `1`       | Stroke width.                                                                                                 |
+| `color`     | `"black"` | Stroke color.                                                                                                 |
+| `halfplane` | none      | If set to a halfplane options object, also draws `halfplane(x1, y1, x2, y2, opts.halfplane)` for this line.   |
 
 ```js
 line(0, 0, 5, 5);
 line(0, 0, 5, 5, { thickness: 2 });
 line(0, 0, 5, 5, { color: "#0044aa", thickness: 2 });
+
+// line + halfplane in one call
+line(Z.x, Z.y, C2.x, C2.y, {
+  thickness: 1,
+  halfplane: { position: 0.9, angle: 135 }
+});
 ```
 
 ### `circle(x, y, r, opts={})`
@@ -179,15 +192,16 @@ convention for marking which half-plane is "in".
 
 `opts`:
 
-| Option      | Default  | Meaning                                                                                                 |
-| ----------- | -------- | ------------------------------------------------------------------------------------------------------- |
-| `side`      | `"left"` | `"left"` or `"right"` of the line direction. "Left" = the 90°-CCW side of the tangent in math coords.   |
-| `count`     | `4`      | Number of strokes.                                                                                      |
-| `length`    | `12`     | Stroke length in raw px.                                                                                |
-| `spacing`   | `8`      | Distance between strokes along the line, in raw px.                                                     |
-| `position`  | `"end"`  | `"end"`, `"start"`, `"middle"`, or a number `0..1` along the line.                                      |
-| `angle`     | `45`     | Stroke angle from the line, into the chosen side. `45` = forward-leaning; `135` = back-leaning.         |
-| `thickness` | `1`      | Stroke thickness.                                                                                       |
+| Option      | Default   | Meaning                                                                                                 |
+| ----------- | --------- | ------------------------------------------------------------------------------------------------------- |
+| `side`      | `"left"`  | `"left"` or `"right"` of the line direction. "Left" = the 90°-CCW side of the tangent in math coords.   |
+| `count`     | `4`       | Number of strokes.                                                                                      |
+| `length`    | `12`      | Stroke length in raw px.                                                                                |
+| `spacing`   | `8`       | Distance between strokes along the line, in raw px.                                                     |
+| `position`  | `"end"`   | `"end"`, `"start"`, `"middle"`, or a number `0..1` along the line.                                      |
+| `angle`     | `45`      | Stroke angle from the line, into the chosen side. `45` = forward-leaning; `135` = back-leaning.         |
+| `thickness` | `1`       | Stroke thickness.                                                                                       |
+| `color`     | `"black"` | Stroke color.                                                                                           |
 
 ```js
 // fish-fin marker at the end of a line, on the left

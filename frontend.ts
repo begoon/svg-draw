@@ -77,23 +77,96 @@ function makeApi(ctx: DrawCtx, state: DrawState) {
   // Shared options for stroked shapes.
   type StrokeOpts = { thickness?: number; color?: string };
   type FilledOpts = StrokeOpts & { fill?: string };
+  type HalfplaneOpts = {
+    side?: "left" | "right";
+    count?: number;
+    length?: number;
+    spacing?: number;
+    position?: "end" | "start" | "middle" | number;
+    angle?: number;
+    thickness?: number;
+    color?: string;
+  };
+
+  // Emit halfplane strokes for the line (x1,y1)->(x2,y2). Used by both
+  // the `halfplane` API and the `halfplane` option on `line`.
+  function emitHalfplane(
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    opts: HalfplaneOpts
+  ) {
+    const side = opts.side ?? "left";
+    const count = opts.count ?? 4;
+    const len = opts.length ?? 12;
+    const spacing = opts.spacing ?? 8;
+    const position = opts.position ?? "end";
+    const angleDeg = opts.angle ?? 45;
+    const thickness = opts.thickness ?? 1;
+    const color = opts.color ?? stroke;
+
+    const X1 = tx(x1), Y1 = tx(y1), X2 = tx(x2), Y2 = tx(y2);
+    const dx = X2 - X1, dy = Y2 - Y1;
+    const L = Math.hypot(dx, dy);
+    if (L === 0) return;
+    const ux = dx / L, uy = dy / L;
+
+    const sign = side === "left" ? 1 : -1;
+    const r = (sign * angleDeg * Math.PI) / 180;
+    const cosR = Math.cos(r), sinR = Math.sin(r);
+    const sx = ux * cosR - uy * sinR;
+    const sy = ux * sinR + uy * cosR;
+
+    let aX: number, aY: number;
+    let walkSign = -1;
+    let startIndex = 0;
+    if (position === "end") { aX = X2; aY = Y2; walkSign = -1; }
+    else if (position === "start") { aX = X1; aY = Y1; walkSign = 1; }
+    else if (position === "middle") {
+      aX = (X1 + X2) / 2;
+      aY = (Y1 + Y2) / 2;
+      walkSign = 1;
+      startIndex = -Math.floor((count - 1) / 2);
+    } else {
+      const t = Number(position);
+      aX = X1 + t * (X2 - X1);
+      aY = Y1 + t * (Y2 - Y1);
+      walkSign = 1;
+      startIndex = -Math.floor((count - 1) / 2);
+    }
+
+    for (let k = 0; k < count; k++) {
+      const i = startIndex + k;
+      const bx = aX + walkSign * i * spacing * ux;
+      const by = aY + walkSign * i * spacing * uy;
+      const ex = bx + len * sx;
+      const ey = by + len * sy;
+      ctx.parts.push(
+        `<line x1="${bx}" y1="${by}" x2="${ex}" y2="${ey}" stroke="${esc(color)}" stroke-width="${thickness}" stroke-linecap="round" />`
+      );
+    }
+  }
 
   return {
     // line(x1, y1, x2, y2, opts)
     //   opts.thickness: stroke width, raw px (default 1)
     //   opts.color:     stroke color (default "black")
+    //   opts.halfplane: if set, also draw halfplane strokes on this line
+    //                   (same options as the halfplane() function).
     line(
       x1: number,
       y1: number,
       x2: number,
       y2: number,
-      opts: StrokeOpts = {}
+      opts: StrokeOpts & { halfplane?: HalfplaneOpts } = {}
     ) {
       const t = opts.thickness ?? 1;
       const c = opts.color ?? stroke;
       ctx.parts.push(
         `<line x1="${tx(x1)}" y1="${tx(y1)}" x2="${tx(x2)}" y2="${tx(y2)}" stroke="${esc(c)}" stroke-width="${t}" stroke-linecap="round" />`
       );
+      if (opts.halfplane) emitHalfplane(x1, y1, x2, y2, opts.halfplane);
     },
     // circle(x, y, r, opts)
     //   opts.thickness: stroke width (default 1)
@@ -253,85 +326,22 @@ function makeApi(ctx: DrawCtx, state: DrawState) {
     },
     // halfplane(x1, y1, x2, y2, opts) — mark one side of the line with
     // short parallel hatch strokes (math-convention "this side is in").
-    //   side:      "left" | "right" relative to the line direction (math frame:
-    //              "left" = the 90°-CCW side of the tangent). Default "left".
+    //   side:      "left" | "right" of the line direction (default "left")
     //   count:     number of strokes (default 4)
     //   length:    stroke length in raw px (default 12)
     //   spacing:   distance between strokes along the line, raw px (default 8)
-    //   position:  "end" | "start" | "middle" | number 0..1 along the line
-    //              (default "end" — strokes fan back from (x2,y2))
-    //   angle:     angle of strokes from the line, into the side, in degrees
-    //              (default 45 — forward-leaning; use 135 for back-leaning)
+    //   position:  "end" | "start" | "middle" | number 0..1 (default "end")
+    //   angle:     stroke angle from the line, in degrees (default 45)
     //   thickness: stroke thickness (default 1)
+    //   color:     stroke color (default "black")
     halfplane(
       x1: number,
       y1: number,
       x2: number,
       y2: number,
-      opts: {
-        side?: "left" | "right";
-        count?: number;
-        length?: number;
-        spacing?: number;
-        position?: "end" | "start" | "middle" | number;
-        angle?: number;
-        thickness?: number;
-      } = {}
+      opts: HalfplaneOpts = {}
     ) {
-      const side = opts.side ?? "left";
-      const count = opts.count ?? 4;
-      const len = opts.length ?? 12;
-      const spacing = opts.spacing ?? 8;
-      const position = opts.position ?? "end";
-      const angleDeg = opts.angle ?? 45;
-      const thickness = opts.thickness ?? 1;
-
-      const X1 = tx(x1), Y1 = tx(y1), X2 = tx(x2), Y2 = tx(y2);
-      const dx = X2 - X1, dy = Y2 - Y1;
-      const L = Math.hypot(dx, dy);
-      if (L === 0) return;
-      const ux = dx / L, uy = dy / L;
-
-      // "left" side = tangent rotated 90° CCW in math frame.
-      // Rotate tangent by ±angle to get stroke direction.
-      const sign = side === "left" ? 1 : -1;
-      const r = (sign * angleDeg * Math.PI) / 180;
-      const cosR = Math.cos(r), sinR = Math.sin(r);
-      const sx = ux * cosR - uy * sinR;
-      const sy = ux * sinR + uy * cosR;
-
-      // anchor: where the first stroke is placed.
-      let aX: number, aY: number;
-      // walkDir: direction along the line we step toward for stroke i+1.
-      // For "end" we walk backward; for "start" forward; for middle we
-      // distribute strokes symmetrically.
-      let walkSign = -1;
-      let startIndex = 0;
-      if (position === "end") { aX = X2; aY = Y2; walkSign = -1; }
-      else if (position === "start") { aX = X1; aY = Y1; walkSign = 1; }
-      else if (position === "middle") {
-        aX = (X1 + X2) / 2;
-        aY = (Y1 + Y2) / 2;
-        walkSign = 1;
-        startIndex = -Math.floor((count - 1) / 2);
-      } else {
-        const t = Number(position);
-        aX = X1 + t * (X2 - X1);
-        aY = Y1 + t * (Y2 - Y1);
-        walkSign = 1;
-        startIndex = -Math.floor((count - 1) / 2);
-      }
-
-      for (let k = 0; k < count; k++) {
-        const i = startIndex + k;
-        const bx = aX + walkSign * i * spacing * ux;
-        const by = aY + walkSign * i * spacing * uy;
-        const ex = bx + len * sx;
-        const ey = by + len * sy;
-        ctx.parts.push(
-          `<line x1="${bx}" y1="${by}" x2="${ex}" y2="${ey}" stroke="${stroke}" stroke-width="${thickness}" stroke-linecap="round" />`
-        );
-      }
+      emitHalfplane(x1, y1, x2, y2, opts);
     },
   };
 }
