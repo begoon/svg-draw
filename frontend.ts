@@ -396,6 +396,23 @@ function makeApi(ctx: DrawCtx, state: DrawState) {
       const [x1, y1] = pt(p1), [x2, y2] = pt(p2);
       api.halfplane(x1, y1, x2, y2, opts);
     },
+
+    // Geometry helpers. Points are [x, y] or {x, y}; results are {x, y}.
+    // on(a, b, p)   — point at fraction p along the segment a->b (lerp).
+    // x_at(a, b, Y) — x of the line a-b at the given Y.
+    // y_at(a, b, X) — y of the line a-b at the given X.
+    on(a: Pt, b: Pt, p: number): { x: number; y: number } {
+      const [ax, ay] = pt(a), [bx, by] = pt(b);
+      return { x: ax + p * (bx - ax), y: ay + p * (by - ay) };
+    },
+    x_at(a: Pt, b: Pt, Y: number): number {
+      const [ax, ay] = pt(a), [bx, by] = pt(b);
+      return ax + ((bx - ax) * (Y - ay)) / (by - ay);
+    },
+    y_at(a: Pt, b: Pt, X: number): number {
+      const [ax, ay] = pt(a), [bx, by] = pt(b);
+      return ay + ((by - ay) * (X - ax)) / (bx - ax);
+    },
     // _fill(p1, p2, ..., pN, opts?) — variadic points + optional opts.
     _fill(...args: any[]) {
       const flat: number[] = [];
@@ -461,6 +478,9 @@ function buildSvg(userCode: string): string {
     "_rect",
     "_fill",
     "_halfplane",
+    "on",
+    "x_at",
+    "y_at",
     "__config",
     `with (__config) {\n${userCode}\n}`
   );
@@ -481,6 +501,9 @@ function buildSvg(userCode: string): string {
     api._rect,
     api._fill,
     api._halfplane,
+    api.on,
+    api.x_at,
+    api.y_at,
     config
   );
 

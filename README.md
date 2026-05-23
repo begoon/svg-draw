@@ -253,6 +253,30 @@ _fill([0, 0], [5, 0], [0, 5], { shape: "/" });
 _halfplane([0, 2], [6, 2], { side: "left", position: "middle", count: 6 });
 ```
 
+## Geometry helpers
+
+Three small helpers for line geometry. Points accept either `[x, y]` or
+`{x, y}` (interchangeable). `on` returns `{x, y}`; the others return a
+number.
+
+| Helper            | Returns          | Meaning                                                        |
+| ----------------- | ---------------- | -------------------------------------------------------------- |
+| `on(a, b, p)`     | `{x, y}`         | Point at fraction `p` along the segment `a -> b` (lerp).       |
+| `x_at(a, b, Y)`   | `number`         | The `x` where the line through `a` and `b` crosses `Y`.        |
+| `y_at(a, b, X)`   | `number`         | The `y` where the line through `a` and `b` crosses `X`.        |
+
+```js
+const A = { x: 0, y: 0 };
+const B = [4, 6];
+
+const M = on(A, B, 0.5);            // midpoint -> { x: 2, y: 3 }
+const xWhereY3 = x_at(A, B, 3);     // 2
+const yWhereX2 = y_at(A, B, 2);     // 3
+
+_circle(M, 4, { fill: "red" });
+_line(A, on(A, B, 0.9), { halfplane: { position: 1.0 } });
+```
+
 ## Coordinate system notes
 
 - The SVG is wrapped in `<g transform="translate(0 AREA) scale(1 -1)">` so
