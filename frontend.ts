@@ -77,6 +77,18 @@ function makeApi(ctx: DrawCtx, state: DrawState) {
   // Shared options for stroked shapes.
   type StrokeOpts = { thickness?: number; color?: string };
   type FilledOpts = StrokeOpts & { fill?: string };
+
+  // Point form used by the `_`-prefixed variants: [x, y] or {x, y}.
+  type Pt = [number, number] | { x: number; y: number };
+  const pt = (p: Pt): [number, number] =>
+    Array.isArray(p) ? [p[0], p[1]] : [p.x, p.y];
+  const isPt = (v: any): v is Pt => {
+    if (Array.isArray(v))
+      return v.length === 2 && typeof v[0] === "number" && typeof v[1] === "number";
+    return (
+      v && typeof v === "object" && typeof v.x === "number" && typeof v.y === "number"
+    );
+  };
   type HalfplaneOpts = {
     side?: "left" | "right";
     count?: number;
@@ -148,7 +160,7 @@ function makeApi(ctx: DrawCtx, state: DrawState) {
     }
   }
 
-  return {
+  const api = {
     // line(x1, y1, x2, y2, opts)
     //   opts.thickness: stroke width, raw px (default 1)
     //   opts.color:     stroke color (default "black")
@@ -343,7 +355,67 @@ function makeApi(ctx: DrawCtx, state: DrawState) {
     ) {
       emitHalfplane(x1, y1, x2, y2, opts);
     },
+
+    // Point-style variants: each raw (x, y) pair becomes a single point
+    // given as [x, y] or {x, y}.
+    _line(p1: Pt, p2: Pt, opts?: StrokeOpts & { halfplane?: HalfplaneOpts }) {
+      const [x1, y1] = pt(p1), [x2, y2] = pt(p2);
+      api.line(x1, y1, x2, y2, opts);
+    },
+    _arrow(p1: Pt, p2: Pt, opts?: StrokeOpts) {
+      const [x1, y1] = pt(p1), [x2, y2] = pt(p2);
+      api.arrow(x1, y1, x2, y2, opts);
+    },
+    _circle(p: Pt, r: number, opts?: FilledOpts) {
+      const [x, y] = pt(p);
+      api.circle(x, y, r, opts);
+    },
+    _square(p: Pt, r: number, opts?: FilledOpts) {
+      const [x, y] = pt(p);
+      api.square(x, y, r, opts);
+    },
+    _rect(p1: Pt, p2: Pt, opts?: FilledOpts) {
+      const [x1, y1] = pt(p1), [x2, y2] = pt(p2);
+      api.rect(x1, y1, x2, y2, opts);
+    },
+    _text(
+      p: Pt,
+      text: string,
+      opts?: {
+        size?: number;
+        sub?: string;
+        super?: string;
+        scale?: number;
+        italic?: boolean;
+      }
+    ) {
+      const [x, y] = pt(p);
+      api.text(x, y, text, opts);
+    },
+    _halfplane(p1: Pt, p2: Pt, opts?: HalfplaneOpts) {
+      const [x1, y1] = pt(p1), [x2, y2] = pt(p2);
+      api.halfplane(x1, y1, x2, y2, opts);
+    },
+    // _fill(p1, p2, ..., pN, opts?) — variadic points + optional opts.
+    _fill(...args: any[]) {
+      const flat: number[] = [];
+      let opts: any = undefined;
+      const tail = args[args.length - 1];
+      if (tail !== undefined && !isPt(tail) && typeof tail === "object") {
+        opts = args.pop();
+      }
+      for (const p of args) {
+        if (!isPt(p)) {
+          throw new Error("_fill expects points as [x,y] or {x,y}");
+        }
+        const [x, y] = pt(p);
+        flat.push(x, y);
+      }
+      if (opts !== undefined) flat.push(opts);
+      api.fill(...flat);
+    },
   };
+  return api;
 }
 
 function buildSvg(userCode: string): string {
@@ -381,6 +453,14 @@ function buildSvg(userCode: string): string {
     "rect",
     "fill",
     "halfplane",
+    "_line",
+    "_circle",
+    "_square",
+    "_arrow",
+    "_text",
+    "_rect",
+    "_fill",
+    "_halfplane",
     "__config",
     `with (__config) {\n${userCode}\n}`
   );
@@ -393,6 +473,14 @@ function buildSvg(userCode: string): string {
     api.rect,
     api.fill,
     api.halfplane,
+    api._line,
+    api._circle,
+    api._square,
+    api._arrow,
+    api._text,
+    api._rect,
+    api._fill,
+    api._halfplane,
     config
   );
 

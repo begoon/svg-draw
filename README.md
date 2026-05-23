@@ -217,6 +217,42 @@ halfplane(0, 2, 6, 2, { side: "left", position: "middle",
                         count: 6, spacing: 30 });
 ```
 
+## Point-style variants (`_`-prefixed)
+
+Every point-taking function has an `_`-prefixed variant where each `(x, y)`
+pair is collapsed into a single point given as either `[x, y]` or `{x, y}`.
+The two point forms are interchangeable and can even be mixed in the same
+call. All other arguments (radius, opts, etc.) keep their original meaning.
+
+| Raw form                                    | Point-style form                               |
+| ------------------------------------------- | ---------------------------------------------- |
+| `line(x1, y1, x2, y2, opts?)`               | `_line(p1, p2, opts?)`                         |
+| `arrow(x1, y1, x2, y2, opts?)`              | `_arrow(p1, p2, opts?)`                        |
+| `circle(x, y, r, opts?)`                    | `_circle(p, r, opts?)`                         |
+| `square(x, y, r, opts?)`                    | `_square(p, r, opts?)`                         |
+| `rect(x1, y1, x2, y2, opts?)`               | `_rect(p1, p2, opts?)`                         |
+| `text(x, y, text, opts?)`                   | `_text(p, text, opts?)`                        |
+| `halfplane(x1, y1, x2, y2, opts?)`          | `_halfplane(p1, p2, opts?)`                    |
+| `fill(x1, y1, ..., xN, yN, opts)`           | `_fill(p1, p2, ..., pN, opts?)`                |
+
+Examples:
+
+```js
+const A = { x: 1, y: 2 };
+const B = [3, 4];
+
+_line(A, B);
+_line(A, B, { thickness: 2, halfplane: { position: 0.9, angle: 135 } });
+
+_circle(A, 10, { fill: "#aaccff" });
+
+_text({ x: 0, y: 5 }, "x", { sub: "1", super: "2", size: 20 });
+
+_fill([0, 0], [5, 0], [0, 5], { shape: "/" });
+
+_halfplane([0, 2], [6, 2], { side: "left", position: "middle", count: 6 });
+```
+
 ## Coordinate system notes
 
 - The SVG is wrapped in `<g transform="translate(0 AREA) scale(1 -1)">` so
