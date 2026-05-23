@@ -397,6 +397,22 @@ function makeApi(ctx: DrawCtx, state: DrawState) {
       api.halfplane(x1, y1, x2, y2, opts);
     },
 
+    // line_angle(p, angle, length, opts) — draw a line of `length` units
+    // from point `p`, at `angle` degrees (0 = along +X axis, CCW positive
+    // in math coords). `length` is in user coords (scales with STRIDE).
+    line_angle(
+      p: Pt,
+      angle: number,
+      length: number,
+      opts?: StrokeOpts & { halfplane?: HalfplaneOpts }
+    ) {
+      const [x, y] = pt(p);
+      const r = (angle * Math.PI) / 180;
+      const x2 = x + length * Math.cos(r);
+      const y2 = y + length * Math.sin(r);
+      api.line(x, y, x2, y2, opts);
+    },
+
     // Geometry helpers. Points are [x, y] or {x, y}; results are {x, y}.
     // on(a, b, p)   — point at fraction p along the segment a->b (lerp).
     // x_at(a, b, Y) — x of the line a-b at the given Y.
@@ -481,6 +497,7 @@ function buildSvg(userCode: string): string {
     "on",
     "x_at",
     "y_at",
+    "line_angle",
     "__config",
     `with (__config) {\n${userCode}\n}`
   );
@@ -504,6 +521,7 @@ function buildSvg(userCode: string): string {
     api.on,
     api.x_at,
     api.y_at,
+    api.line_angle,
     config
   );
 

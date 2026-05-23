@@ -253,6 +253,21 @@ _fill([0, 0], [5, 0], [0, 5], { shape: "/" });
 _halfplane([0, 2], [6, 2], { side: "left", position: "middle", count: 6 });
 ```
 
+### `line_angle(p, angle, length, opts={})`
+
+Draws a line starting at point `p` (`[x, y]` or `{x, y}`), at `angle` degrees,
+of the given `length`. `angle` is measured CCW from the positive X axis (so
+`angle: 0` points right, `angle: 90` points up in math coords). `length` is
+in user coordinates — it scales with `STRIDE` like other position values.
+
+Accepts the same `opts` as `line` (`thickness`, `color`, `halfplane`).
+
+```js
+line_angle({ x: 0, y: 0 }, 45, 5);
+line_angle([2, 2], 90, 3, { color: "red", thickness: 2 });
+line_angle([0, 0], 30, 6, { halfplane: { position: 0.9, angle: 135 } });
+```
+
 ## Geometry helpers
 
 Three small helpers for line geometry. Points accept either `[x, y]` or
