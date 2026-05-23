@@ -641,9 +641,20 @@ function renderTabs() {
     const label = document.createElement("span");
     label.className = "tab-label";
     label.textContent = name;
+    label.title = "Click to activate, double-click to rename";
     label.addEventListener("click", () => activateTab(name));
     label.addEventListener("dblclick", () => renameTab(name));
     tab.appendChild(label);
+
+    const rename = document.createElement("button");
+    rename.className = "tab-rename";
+    rename.textContent = "✎";
+    rename.title = "Rename";
+    rename.addEventListener("click", (e) => {
+      e.stopPropagation();
+      renameTab(name);
+    });
+    tab.appendChild(rename);
 
     const close = document.createElement("button");
     close.className = "tab-close";

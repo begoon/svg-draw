@@ -114,19 +114,29 @@ main {
     "SF Mono", Menlo, Monaco, Consolas, "Courier New", monospace;
 }
 
-.tab-close {
+.tab-close,
+.tab-rename {
   background: transparent;
   color: #888;
   border: none;
   padding: 0 6px;
   margin: 0;
-  font-size: 14px;
+  font-size: 12px;
   line-height: 1;
   cursor: pointer;
   border-radius: 3px;
 }
 
-.tab-close:hover {
+.tab-rename {
+  font-size: 11px;
+}
+
+.tab-close {
+  font-size: 14px;
+}
+
+.tab-close:hover,
+.tab-rename:hover {
   background: #d0d0d0;
   color: #000;
 }
