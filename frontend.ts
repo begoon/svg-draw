@@ -1,5 +1,13 @@
-import { EditorView, keymap, lineNumbers, highlightActiveLine } from "@codemirror/view";
-import { EditorState } from "@codemirror/state";
+import {
+  EditorView,
+  keymap,
+  lineNumbers,
+  highlightActiveLine,
+  ViewPlugin,
+  Decoration,
+} from "@codemirror/view";
+import type { DecorationSet, ViewUpdate } from "@codemirror/view";
+import { EditorState, RangeSetBuilder } from "@codemirror/state";
 import { javascript } from "@codemirror/lang-javascript";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import {
@@ -7,6 +15,7 @@ import {
   defaultHighlightStyle,
   syntaxHighlighting,
   indentOnInput,
+  syntaxTree,
 } from "@codemirror/language";
 
 const DEFAULT_AREA = 500;
@@ -479,6 +488,65 @@ const onChange = debounce((code: string) => {
   render(code);
 }, 200);
 
+// Names that should be highlighted as built-in API identifiers in the
+// editor. Drawing functions, globals, and geometry helpers.
+const API_FNS = new Set([
+  "line",
+  "arrow",
+  "circle",
+  "square",
+  "rect",
+  "fill",
+  "text",
+  "halfplane",
+  "line_angle",
+  "on",
+  "x_at",
+  "y_at",
+]);
+const API_GLOBALS = new Set(["AREA", "STRIDE", "ZERO"]);
+
+// Lezer's JS grammar names a bare identifier reference `VariableName`.
+// (Declarations like `let foo` use `VariableDefinition`, so this won't
+// fire when a user shadows an API name — which is what we want: their
+// local binding stops being the API.)
+const apiHighlighter = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet;
+    constructor(view: EditorView) {
+      this.decorations = this.build(view);
+    }
+    update(u: ViewUpdate) {
+      if (
+        u.docChanged ||
+        u.viewportChanged ||
+        syntaxTree(u.startState) !== syntaxTree(u.state)
+      ) {
+        this.decorations = this.build(u.view);
+      }
+    }
+    build(view: EditorView): DecorationSet {
+      const fnMark = Decoration.mark({ class: "cm-api-fn" });
+      const globMark = Decoration.mark({ class: "cm-api-global" });
+      const b = new RangeSetBuilder<Decoration>();
+      for (const { from, to } of view.visibleRanges) {
+        syntaxTree(view.state).iterate({
+          from,
+          to,
+          enter: (node) => {
+            if (node.name !== "VariableName") return;
+            const name = view.state.doc.sliceString(node.from, node.to);
+            if (API_FNS.has(name)) b.add(node.from, node.to, fnMark);
+            else if (API_GLOBALS.has(name)) b.add(node.from, node.to, globMark);
+          },
+        });
+      }
+      return b.finish();
+    }
+  },
+  { decorations: (v) => v.decorations },
+);
+
 const view = new EditorView({
   parent: document.getElementById("editor") as HTMLDivElement,
   state: EditorState.create({
@@ -491,6 +559,7 @@ const view = new EditorView({
       highlightActiveLine(),
       syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
       javascript(),
+      apiHighlighter,
       keymap.of([...defaultKeymap, ...historyKeymap]),
       EditorView.theme({
         "&": { backgroundColor: "#ffffff", color: "#1f1f1f" },
@@ -503,6 +572,8 @@ const view = new EditorView({
         },
         ".cm-activeLine": { backgroundColor: "#f0f4ff" },
         ".cm-activeLineGutter": { backgroundColor: "#e8eefc" },
+        ".cm-api-fn": { color: "#0a7c7c", fontWeight: "600" },
+        ".cm-api-global": { color: "#8a2bb8", fontWeight: "600" },
       }),
       EditorView.updateListener.of((u) => {
         if (u.docChanged) {
