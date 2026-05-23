@@ -62,79 +62,74 @@ with the following keys (all optional):
 
 For `arrow`, the arrowhead inherits the line's `color` automatically.
 
-### `line(x1, y1, x2, y2, opts={})`
+All point arguments accept either `[x, y]` or `{x, y}`. The two forms are
+interchangeable and may be mixed in the same call.
 
-Straight line with rounded caps. Accepts `thickness`, `color`, and an
-optional `halfplane` shortcut.
+### `line(p1, p2, opts={})`
 
-| Option      | Default   | Meaning                                                                                                       |
-| ----------- | --------- | ------------------------------------------------------------------------------------------------------------- |
-| `thickness` | `1`       | Stroke width.                                                                                                 |
-| `color`     | `"black"` | Stroke color.                                                                                                 |
-| `halfplane` | none      | If set to a halfplane options object, also draws `halfplane(x1, y1, x2, y2, opts.halfplane)` for this line.   |
+Straight line with rounded caps.
+
+| Option      | Default   | Meaning                                                                                                |
+| ----------- | --------- | ------------------------------------------------------------------------------------------------------ |
+| `thickness` | `1`       | Stroke width.                                                                                          |
+| `color`     | `"black"` | Stroke color.                                                                                          |
+| `halfplane` | none      | If set to a halfplane options object, also draws `halfplane(p1, p2, opts.halfplane)` for this line.    |
 
 ```js
-line(0, 0, 5, 5);
-line(0, 0, 5, 5, { thickness: 2 });
-line(0, 0, 5, 5, { color: "#0044aa", thickness: 2 });
+line([0, 0], [5, 5]);
+line([0, 0], [5, 5], { thickness: 2 });
+line({ x: 0, y: 0 }, { x: 5, y: 5 }, { color: "#0044aa", thickness: 2 });
 
 // line + halfplane in one call
-line(Z.x, Z.y, C2.x, C2.y, {
-  thickness: 1,
-  halfplane: { position: 0.9, angle: 135 }
-});
+line(Z, C2, { thickness: 1, halfplane: { position: 0.9, angle: 135 } });
 ```
 
-### `circle(x, y, r, opts={})`
+### `arrow(p1, p2, opts={})`
 
-Circle centered at `(x, y)` with radius `r`. Accepts `thickness`, `color`,
-`fill`.
+Line from `p1` to `p2` with a filled triangular arrowhead at `p2`. Accepts
+`thickness`, `color`. The arrowhead is rendered in the same color as the line.
 
 ```js
-circle(2, 3, 10);                                  // outlined
-circle(2, 3, 10, { fill: "#aaccff" });             // filled
-circle(2, 3, 10, { thickness: 2, color: "red", fill: "#aaccff" });
+arrow([0, 0], [5, 4]);
+arrow([0, 0], [5, 4], { thickness: 2 });
+arrow({ x: 0, y: 0 }, { x: 5, y: 4 }, { color: "#0044aa", thickness: 2 });
 ```
 
-### `square(x, y, r, opts={})`
+### `circle(p, r, opts={})`
 
-Same options as `circle`, but draws a square centered at `(x, y)` with
-half-side `r` (so the side length is `2 * r`).
+Circle centered at `p` with radius `r`. Accepts `thickness`, `color`, `fill`.
 
 ```js
-square(2, 3, 8);
-square(2, 3, 8, { fill: "#000000" });
+circle([2, 3], 10);                                  // outlined
+circle([2, 3], 10, { fill: "#aaccff" });             // filled
+circle({ x: 2, y: 3 }, 10, { thickness: 2, color: "red", fill: "#aaccff" });
 ```
 
-### `rect(x1, y1, x2, y2, opts={})`
+### `square(p, r, opts={})`
 
-Axis-aligned rectangle from `(x1, y1)` to `(x2, y2)`. Endpoints can be given
+Same options as `circle`, but draws a square centered at `p` with half-side
+`r` (so the side length is `2 * r`).
+
+```js
+square([2, 3], 8);
+square([2, 3], 8, { fill: "#000000" });
+```
+
+### `rect(p1, p2, opts={})`
+
+Axis-aligned rectangle between corners `p1` and `p2`. Corners can be given
 in any order. Accepts `thickness`, `color`, `fill`.
 
 ```js
-rect(1, 1, 4, 3);
-rect(1, 1, 4, 3, { fill: "#ffddaa" });
-rect(1, 1, 4, 3, { thickness: 2, color: "darkred", fill: "#ffddaa" });
+rect([1, 1], [4, 3]);
+rect([1, 1], [4, 3], { fill: "#ffddaa" });
+rect([1, 1], [4, 3], { thickness: 2, color: "darkred", fill: "#ffddaa" });
 ```
 
-### `arrow(x1, y1, x2, y2, opts={})`
+### `text(p, text, opts={})`
 
-Line from `(x1, y1)` to `(x2, y2)` with a filled triangular arrowhead at
-`(x2, y2)`. Accepts `thickness`, `color`. The arrowhead is rendered in the
-same color as the line.
-
-```js
-arrow(0, 0, 5, 4);
-arrow(0, 0, 5, 4, { thickness: 2 });
-arrow(0, 0, 5, 4, { color: "#0044aa", thickness: 2 });
-```
-
-### `text(x, y, text, opts={})`
-
-Text whose **baseline** sits at `(x, y)` (in math coordinates — y goes up).
+Text whose **baseline** sits at `p` (in math coordinates — y goes up).
 Glyphs are flipped locally so they render upright.
-
-`opts`:
 
 | Option   | Default | Meaning                                                          |
 | -------- | ------- | ---------------------------------------------------------------- |
@@ -144,24 +139,21 @@ Glyphs are flipped locally so they render upright.
 | `scale`  | `0.7`   | Sub/super font size = `size * scale`.                            |
 | `italic` | `false` | Render in italic (applies to the main text and sub/super).       |
 
-Sub and super are placed immediately after the main text with a small
-horizontal gap of `size * 0.12` so they don't crowd the preceding glyph.
-Both can be combined on the same call.
+Sub and super are placed after the main text with a small horizontal gap of
+`size * 0.12` so they don't crowd the preceding glyph.
 
 ```js
-text(2, 3, "x");
-text(2, 3, "x", { sub: "1", super: "2", size: 20 });
-text(2, 3, "E = mc", { super: "2", size: 24, scale: 0.5 });
-text(2, 3, "v", { italic: true, sub: "i", size: 18 });
+text([2, 3], "x");
+text([2, 3], "x", { sub: "1", super: "2", size: 20 });
+text([2, 3], "E = mc", { super: "2", size: 24, scale: 0.5 });
+text([2, 3], "v", { italic: true, sub: "i", size: 18 });
 ```
 
-### `fill(x1, y1, x2, y2, ..., xN, yN, opts)`
+### `fill(p1, p2, ..., pN, opts)`
 
-Pattern-fills a polygon defined by at least 3 points (6 numbers).
-Hatching uses an SVG `<pattern>`, so it's automatically clipped to the polygon
-border regardless of edge angle.
-
-`opts`:
+Pattern-fills a polygon defined by at least 3 points. Hatching uses an SVG
+`<pattern>` so it's automatically clipped to the polygon border regardless
+of edge angle.
 
 | Option      | Default     | Meaning                                                                |
 | ----------- | ----------- | ---------------------------------------------------------------------- |
@@ -172,25 +164,24 @@ border regardless of edge angle.
 
 ```js
 // triangle hatched at 45°
-fill(0, 0, 5, 0, 0, 5, { shape: "/" });
+fill([0, 0], [5, 0], [0, 5], { shape: "/" });
 
 // pentagon with vertical lines, wider spacing
-fill(2, 2, 4, 2, 4.5, 4, 3, 5, 1.5, 4, { shape: "v", step: 12 });
+fill([2, 2], [4, 2], [4.5, 4], [3, 5], [1.5, 4],
+     { shape: "v", step: 12 });
 
 // arbitrary polygon, back-slash hatching, thicker, blue
-fill(0, 6, 3, 6, 3, 6.5, 1.5, 7, 0, 6.5,
+fill([0, 6], [3, 6], [3, 6.5], [1.5, 7], [0, 6.5],
      { shape: "\\", step: 6, thickness: 1.5, color: "#0044aa" });
 ```
 
 Polygons can be concave and the same `(angle, step, thickness, color)` is
 deduplicated into a single `<pattern>` definition.
 
-### `halfplane(x1, y1, x2, y2, opts={})`
+### `halfplane(p1, p2, opts={})`
 
 Draws a few short hatch strokes on one side of the line — the math/engineering
 convention for marking which half-plane is "in".
-
-`opts`:
 
 | Option      | Default   | Meaning                                                                                                 |
 | ----------- | --------- | ------------------------------------------------------------------------------------------------------- |
@@ -205,67 +196,36 @@ convention for marking which half-plane is "in".
 
 ```js
 // fish-fin marker at the end of a line, on the left
-line(1, 1, 5, 4);
-halfplane(1, 1, 5, 4, { side: "left" });
+line([1, 1], [5, 4]);
+halfplane([1, 1], [5, 4], { side: "left" });
 
 // back-leaning, on the right
-halfplane(1, 3, 5, 6, { side: "right", angle: 135 });
+halfplane([1, 3], [5, 6], { side: "right", angle: 135 });
 
 // constraint y >= 2, mark the upper half-plane along the whole line
-line(0, 2, 6, 2);
-halfplane(0, 2, 6, 2, { side: "left", position: "middle",
-                        count: 6, spacing: 30 });
-```
-
-## Point-style variants (`_`-prefixed)
-
-Every point-taking function has an `_`-prefixed variant where each `(x, y)`
-pair is collapsed into a single point given as either `[x, y]` or `{x, y}`.
-The two point forms are interchangeable and can even be mixed in the same
-call. All other arguments (radius, opts, etc.) keep their original meaning.
-
-| Raw form                                    | Point-style form                               |
-| ------------------------------------------- | ---------------------------------------------- |
-| `line(x1, y1, x2, y2, opts?)`               | `_line(p1, p2, opts?)`                         |
-| `arrow(x1, y1, x2, y2, opts?)`              | `_arrow(p1, p2, opts?)`                        |
-| `circle(x, y, r, opts?)`                    | `_circle(p, r, opts?)`                         |
-| `square(x, y, r, opts?)`                    | `_square(p, r, opts?)`                         |
-| `rect(x1, y1, x2, y2, opts?)`               | `_rect(p1, p2, opts?)`                         |
-| `text(x, y, text, opts?)`                   | `_text(p, text, opts?)`                        |
-| `halfplane(x1, y1, x2, y2, opts?)`          | `_halfplane(p1, p2, opts?)`                    |
-| `fill(x1, y1, ..., xN, yN, opts)`           | `_fill(p1, p2, ..., pN, opts?)`                |
-
-Examples:
-
-```js
-const A = { x: 1, y: 2 };
-const B = [3, 4];
-
-_line(A, B);
-_line(A, B, { thickness: 2, halfplane: { position: 0.9, angle: 135 } });
-
-_circle(A, 10, { fill: "#aaccff" });
-
-_text({ x: 0, y: 5 }, "x", { sub: "1", super: "2", size: 20 });
-
-_fill([0, 0], [5, 0], [0, 5], { shape: "/" });
-
-_halfplane([0, 2], [6, 2], { side: "left", position: "middle", count: 6 });
+line([0, 2], [6, 2]);
+halfplane([0, 2], [6, 2],
+          { side: "left", position: "middle", count: 6, spacing: 30 });
 ```
 
 ### `line_angle(p, angle, length, opts={})`
 
-Draws a line starting at point `p` (`[x, y]` or `{x, y}`), at `angle` degrees,
-of the given `length`. `angle` is measured CCW from the positive X axis (so
-`angle: 0` points right, `angle: 90` points up in math coords). `length` is
-in user coordinates — it scales with `STRIDE` like other position values.
+Draws a line starting at point `p`, at `angle` degrees, of the given `length`.
+`angle` is measured CCW from the positive X axis (`angle: 0` points right,
+`angle: 90` points up in math coords). `length` is in user coordinates — it
+scales with `STRIDE`.
 
 Accepts the same `opts` as `line` (`thickness`, `color`, `halfplane`).
+Returns the end point as `{ x, y }`, so it can be chained.
 
 ```js
 line_angle({ x: 0, y: 0 }, 45, 5);
 line_angle([2, 2], 90, 3, { color: "red", thickness: 2 });
 line_angle([0, 0], 30, 6, { halfplane: { position: 0.9, angle: 135 } });
+
+// chain off the returned end point
+const tip = line_angle([0, 0], 45, 5);
+circle(tip, 4, { fill: "red" });
 ```
 
 ## Geometry helpers
@@ -288,8 +248,8 @@ const M = on(A, B, 0.5);            // midpoint -> { x: 2, y: 3 }
 const xWhereY3 = x_at(A, B, 3);     // 2
 const yWhereX2 = y_at(A, B, 2);     // 3
 
-_circle(M, 4, { fill: "red" });
-_line(A, on(A, B, 0.9), { halfplane: { position: 1.0 } });
+circle(M, 4, { fill: "red" });
+line(A, on(A, B, 0.9), { halfplane: { position: 1.0 } });
 ```
 
 ## Coordinate system notes

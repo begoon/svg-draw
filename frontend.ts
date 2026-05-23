@@ -26,21 +26,21 @@ ZERO = 20;
 
 // axes (in raw units, switch STRIDE back temporarily)
 STRIDE = 1; ZERO = 0;
-arrow(0, 20, AREA, 20);
-arrow(20, 0, 20, AREA);
+arrow([0, 20], [AREA, 20]);
+arrow([20, 0], [20, AREA]);
 
 // 6x6 grid of dots
 STRIDE = 50; ZERO = 20;
 for (let y = 0; y < 6; y++) {
   for (let x = 0; x < 6; x++) {
-    circle(x, y, 4, { fill: "#000000" });
+    circle([x, y], 4, { fill: "#000000" });
   }
 }
 
 // a couple of shapes on the grid
-rect(1, 1, 3, 3, { thickness: 2, fill: "#aaccff" });
-arrow(0, 5, 5, 0, { thickness: 2 });
-text(0, 5, "x", { sub: "1", super: "2", size: 20 });
+rect([1, 1], [3, 3], { thickness: 2, fill: "#aaccff" });
+arrow([0, 5], [5, 0], { thickness: 2 });
+text([0, 5], "x", { sub: "1", super: "2", size: 20 });
 `;
 
 type SvgPart = string;
@@ -161,18 +161,16 @@ function makeApi(ctx: DrawCtx, state: DrawState) {
   }
 
   const api = {
-    // line(x1, y1, x2, y2, opts)
+    // line(p1, p2, opts)
     //   opts.thickness: stroke width, raw px (default 1)
     //   opts.color:     stroke color (default "black")
-    //   opts.halfplane: if set, also draw halfplane strokes on this line
-    //                   (same options as the halfplane() function).
+    //   opts.halfplane: if set, also draw halfplane strokes on this line.
     line(
-      x1: number,
-      y1: number,
-      x2: number,
-      y2: number,
+      p1: Pt,
+      p2: Pt,
       opts: StrokeOpts & { halfplane?: HalfplaneOpts } = {}
     ) {
+      const [x1, y1] = pt(p1), [x2, y2] = pt(p2);
       const t = opts.thickness ?? 1;
       const c = opts.color ?? stroke;
       ctx.parts.push(
@@ -180,16 +178,20 @@ function makeApi(ctx: DrawCtx, state: DrawState) {
       );
       if (opts.halfplane) emitHalfplane(x1, y1, x2, y2, opts.halfplane);
     },
-    // circle(x, y, r, opts)
-    //   opts.thickness: stroke width (default 1)
-    //   opts.color:     stroke color (default "black")
-    //   opts.fill:      fill color (default: no fill)
-    circle(
-      x: number,
-      y: number,
-      r: number,
-      opts: FilledOpts = {}
-    ) {
+    // arrow(p1, p2, opts) — line with arrowhead at p2. Arrowhead color
+    // inherits opts.color.
+    arrow(p1: Pt, p2: Pt, opts: StrokeOpts = {}) {
+      const [x1, y1] = pt(p1), [x2, y2] = pt(p2);
+      const t = opts.thickness ?? 1;
+      const c = opts.color ?? stroke;
+      ctx.needsArrowMarker = true;
+      ctx.parts.push(
+        `<line x1="${tx(x1)}" y1="${tx(y1)}" x2="${tx(x2)}" y2="${tx(y2)}" stroke="${esc(c)}" stroke-width="${t}" stroke-linecap="round" marker-end="url(#arrowhead)" />`
+      );
+    },
+    // circle(p, r, opts) — centered at p with radius r.
+    circle(p: Pt, r: number, opts: FilledOpts = {}) {
+      const [x, y] = pt(p);
       const t = opts.thickness ?? 1;
       const c = opts.color ?? stroke;
       const f = opts.fill ?? noFill;
@@ -197,13 +199,9 @@ function makeApi(ctx: DrawCtx, state: DrawState) {
         `<circle cx="${tx(x)}" cy="${tx(y)}" r="${r}" stroke="${esc(c)}" stroke-width="${t}" fill="${esc(f)}" />`
       );
     },
-    // square(x, y, r, opts) — centered at (x,y); side = 2*r (like circle).
-    square(
-      x: number,
-      y: number,
-      r: number,
-      opts: FilledOpts = {}
-    ) {
+    // square(p, r, opts) — centered at p; side = 2*r (mirrors circle's r).
+    square(p: Pt, r: number, opts: FilledOpts = {}) {
+      const [x, y] = pt(p);
       const t = opts.thickness ?? 1;
       const c = opts.color ?? stroke;
       const f = opts.fill ?? noFill;
@@ -212,32 +210,9 @@ function makeApi(ctx: DrawCtx, state: DrawState) {
         `<rect x="${cx - r}" y="${cy - r}" width="${2 * r}" height="${2 * r}" stroke="${esc(c)}" stroke-width="${t}" fill="${esc(f)}" />`
       );
     },
-    // arrow(x1, y1, x2, y2, opts)
-    //   opts.thickness: stroke width (default 1)
-    //   opts.color:     stroke + arrowhead color (default "black")
-    arrow(
-      x1: number,
-      y1: number,
-      x2: number,
-      y2: number,
-      opts: StrokeOpts = {}
-    ) {
-      const t = opts.thickness ?? 1;
-      const c = opts.color ?? stroke;
-      ctx.needsArrowMarker = true;
-      ctx.parts.push(
-        `<line x1="${tx(x1)}" y1="${tx(y1)}" x2="${tx(x2)}" y2="${tx(y2)}" stroke="${esc(c)}" stroke-width="${t}" stroke-linecap="round" marker-end="url(#arrowhead)" />`
-      );
-    },
-    // rect(x1, y1, x2, y2, opts) — axis-aligned, endpoints in any order.
-    //   opts.thickness, opts.color, opts.fill — same as circle.
-    rect(
-      x1: number,
-      y1: number,
-      x2: number,
-      y2: number,
-      opts: FilledOpts = {}
-    ) {
+    // rect(p1, p2, opts) — axis-aligned, corners in any order.
+    rect(p1: Pt, p2: Pt, opts: FilledOpts = {}) {
+      const [x1, y1] = pt(p1), [x2, y2] = pt(p2);
       const t = opts.thickness ?? 1;
       const c = opts.color ?? stroke;
       const f = opts.fill ?? noFill;
@@ -250,8 +225,7 @@ function makeApi(ctx: DrawCtx, state: DrawState) {
         `<rect x="${x}" y="${y}" width="${w}" height="${h}" stroke="${esc(c)}" stroke-width="${t}" fill="${esc(f)}" />`
       );
     },
-    // fill(x1, y1, x2, y2, ..., { shape, step?, thickness?, color? })
-    // Pattern-fills a polygon defined by the given points.
+    // fill(p1, p2, ..., pN, opts) — pattern-fills a polygon of >=3 points.
     //   shape: "h" | "v" | "/" | "\\"  (default "/")
     //   step:  spacing between lines, raw px (default 8)
     //   thickness: line thickness, raw px (default 1)
@@ -259,14 +233,16 @@ function makeApi(ctx: DrawCtx, state: DrawState) {
     fill(...args: any[]) {
       let opts: Record<string, any> = {};
       const tail = args[args.length - 1];
-      if (tail && typeof tail === "object" && !Array.isArray(tail)) {
+      if (tail !== undefined && !isPt(tail) && typeof tail === "object") {
         opts = args.pop();
       }
-      if (args.length < 6 || args.length % 2 !== 0) {
-        throw new Error(
-          "fill needs at least 3 points (6 numbers) and an options object"
-        );
+      if (args.length < 3) {
+        throw new Error("fill needs at least 3 points");
       }
+      const points = args.map((p) => {
+        if (!isPt(p)) throw new Error("fill expects points as [x,y] or {x,y}");
+        return pt(p);
+      });
       const shape: string = opts.shape ?? "/";
       const step: number = Number(opts.step ?? 8);
       const thickness: number = Number(opts.thickness ?? 1);
@@ -287,23 +263,19 @@ function makeApi(ctx: DrawCtx, state: DrawState) {
         pat = { id, svg };
         ctx.patterns.set(key, pat);
       }
-      const ptsStr: string[] = [];
-      for (let j = 0; j < args.length; j += 2) {
-        ptsStr.push(`${tx(args[j])},${tx(args[j + 1])}`);
-      }
+      const ptsStr = points.map(([x, y]) => `${tx(x)},${tx(y)}`).join(" ");
       ctx.parts.push(
-        `<polygon points="${ptsStr.join(" ")}" fill="url(#${pat.id})" stroke="none" />`
+        `<polygon points="${ptsStr}" fill="url(#${pat.id})" stroke="none" />`
       );
     },
-    // text(x, y, text, opts)
+    // text(p, text, opts)
     //   opts.size:   font size in raw px (default 10)
     //   opts.sub:    subscript string (default "")
     //   opts.super:  superscript string (default "")
     //   opts.scale:  sub/super font size = size * scale (default 0.7)
     //   opts.italic: render in italic (default false)
     text(
-      x: number,
-      y: number,
+      p: Pt,
       text: string,
       opts: {
         size?: number;
@@ -313,6 +285,7 @@ function makeApi(ctx: DrawCtx, state: DrawState) {
         italic?: boolean;
       } = {}
     ) {
+      const [x, y] = pt(p);
       const size = opts.size ?? 10;
       const sub = opts.sub ?? "";
       const sup = opts.super ?? "";
@@ -320,8 +293,6 @@ function makeApi(ctx: DrawCtx, state: DrawState) {
       const italic = opts.italic ?? false;
       const small = size * scale;
       const style = italic ? ` font-style="italic"` : "";
-      // Small horizontal gap before sub/super so they don't crowd the
-      // main text (proportional to font size).
       const gap = size * 0.12;
       let inner = esc(text);
       if (sup) {
@@ -330,87 +301,31 @@ function makeApi(ctx: DrawCtx, state: DrawState) {
       if (sub) {
         inner += `<tspan dx="${gap}" baseline-shift="sub" font-size="${small}">${esc(sub)}</tspan>`;
       }
-      // Text lives inside the math-flipped group; flip locally so glyphs
-      // are upright. y is the text baseline in math coords.
       ctx.parts.push(
         `<text transform="translate(${tx(x)} ${tx(y)}) scale(1 -1)" font-family="sans-serif" font-size="${size}"${style} fill="${stroke}">${inner}</text>`
       );
     },
-    // halfplane(x1, y1, x2, y2, opts) — mark one side of the line with
-    // short parallel hatch strokes (math-convention "this side is in").
-    //   side:      "left" | "right" of the line direction (default "left")
-    //   count:     number of strokes (default 4)
-    //   length:    stroke length in raw px (default 12)
-    //   spacing:   distance between strokes along the line, raw px (default 8)
-    //   position:  "end" | "start" | "middle" | number 0..1 (default "end")
-    //   angle:     stroke angle from the line, in degrees (default 45)
-    //   thickness: stroke thickness (default 1)
-    //   color:     stroke color (default "black")
-    halfplane(
-      x1: number,
-      y1: number,
-      x2: number,
-      y2: number,
-      opts: HalfplaneOpts = {}
-    ) {
+    // halfplane(p1, p2, opts) — see emitHalfplane for option semantics.
+    halfplane(p1: Pt, p2: Pt, opts: HalfplaneOpts = {}) {
+      const [x1, y1] = pt(p1), [x2, y2] = pt(p2);
       emitHalfplane(x1, y1, x2, y2, opts);
     },
 
-    // Point-style variants: each raw (x, y) pair becomes a single point
-    // given as [x, y] or {x, y}.
-    _line(p1: Pt, p2: Pt, opts?: StrokeOpts & { halfplane?: HalfplaneOpts }) {
-      const [x1, y1] = pt(p1), [x2, y2] = pt(p2);
-      api.line(x1, y1, x2, y2, opts);
-    },
-    _arrow(p1: Pt, p2: Pt, opts?: StrokeOpts) {
-      const [x1, y1] = pt(p1), [x2, y2] = pt(p2);
-      api.arrow(x1, y1, x2, y2, opts);
-    },
-    _circle(p: Pt, r: number, opts?: FilledOpts) {
-      const [x, y] = pt(p);
-      api.circle(x, y, r, opts);
-    },
-    _square(p: Pt, r: number, opts?: FilledOpts) {
-      const [x, y] = pt(p);
-      api.square(x, y, r, opts);
-    },
-    _rect(p1: Pt, p2: Pt, opts?: FilledOpts) {
-      const [x1, y1] = pt(p1), [x2, y2] = pt(p2);
-      api.rect(x1, y1, x2, y2, opts);
-    },
-    _text(
-      p: Pt,
-      text: string,
-      opts?: {
-        size?: number;
-        sub?: string;
-        super?: string;
-        scale?: number;
-        italic?: boolean;
-      }
-    ) {
-      const [x, y] = pt(p);
-      api.text(x, y, text, opts);
-    },
-    _halfplane(p1: Pt, p2: Pt, opts?: HalfplaneOpts) {
-      const [x1, y1] = pt(p1), [x2, y2] = pt(p2);
-      api.halfplane(x1, y1, x2, y2, opts);
-    },
-
-    // line_angle(p, angle, length, opts) — draw a line of `length` units
-    // from point `p`, at `angle` degrees (0 = along +X axis, CCW positive
-    // in math coords). `length` is in user coords (scales with STRIDE).
+    // line_angle(p, angle, length, opts) — line of `length` units from p,
+    // at `angle` degrees (0 = +X axis, CCW positive). `length` is in user
+    // coords (scales with STRIDE). Returns the end point as { x, y }.
     line_angle(
       p: Pt,
       angle: number,
       length: number,
       opts?: StrokeOpts & { halfplane?: HalfplaneOpts }
-    ) {
+    ): { x: number; y: number } {
       const [x, y] = pt(p);
       const r = (angle * Math.PI) / 180;
       const x2 = x + length * Math.cos(r);
       const y2 = y + length * Math.sin(r);
-      api.line(x, y, x2, y2, opts);
+      api.line({ x, y }, { x: x2, y: y2 }, opts);
+      return { x: x2, y: y2 };
     },
 
     // Geometry helpers. Points are [x, y] or {x, y}; results are {x, y}.
@@ -479,49 +394,33 @@ function buildSvg(userCode: string): string {
   // Note: cannot use "use strict" here — `with` is forbidden in strict mode.
   const fn = new Function(
     "line",
+    "arrow",
     "circle",
     "square",
-    "arrow",
-    "text",
     "rect",
     "fill",
+    "text",
     "halfplane",
-    "_line",
-    "_circle",
-    "_square",
-    "_arrow",
-    "_text",
-    "_rect",
-    "_fill",
-    "_halfplane",
+    "line_angle",
     "on",
     "x_at",
     "y_at",
-    "line_angle",
     "__config",
     `with (__config) {\n${userCode}\n}`
   );
   fn(
     api.line,
+    api.arrow,
     api.circle,
     api.square,
-    api.arrow,
-    api.text,
     api.rect,
     api.fill,
+    api.text,
     api.halfplane,
-    api._line,
-    api._circle,
-    api._square,
-    api._arrow,
-    api._text,
-    api._rect,
-    api._fill,
-    api._halfplane,
+    api.line_angle,
     api.on,
     api.x_at,
     api.y_at,
-    api.line_angle,
     config
   );
 
