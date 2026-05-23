@@ -481,12 +481,39 @@ function debounce<T extends (...args: any[]) => void>(fn: T, ms: number): T {
   }) as T;
 }
 
-const initialCode = localStorage.getItem(STORAGE_KEY) ?? STARTER;
+// Multi-file storage.
+const FILES_KEY = "svg-draw:files";
+type FilesState = { files: Record<string, string>; active: string };
 
-const onChange = debounce((code: string) => {
-  localStorage.setItem(STORAGE_KEY, code);
-  render(code);
-}, 200);
+function loadFiles(): FilesState {
+  const raw = localStorage.getItem(FILES_KEY);
+  if (raw) {
+    try {
+      const v = JSON.parse(raw);
+      if (
+        v && typeof v === "object" &&
+        v.files && typeof v.files === "object" &&
+        typeof v.active === "string" && v.active in v.files
+      ) return v as FilesState;
+    } catch {}
+  }
+  // Migrate from the old single-doc key, if present.
+  const legacy = localStorage.getItem(STORAGE_KEY);
+  if (legacy != null) {
+    localStorage.removeItem(STORAGE_KEY);
+    return { files: { "main.js": legacy }, active: "main.js" };
+  }
+  return { files: { "main.js": STARTER }, active: "main.js" };
+}
+
+function saveFiles() {
+  localStorage.setItem(FILES_KEY, JSON.stringify(filesState));
+}
+
+const filesState = loadFiles();
+
+// Render is debounced; saving is immediate (each keystroke persists).
+const renderDebounced = debounce((code: string) => render(code), 200);
 
 // Names that should be highlighted as built-in API identifiers in the
 // editor. Drawing functions, globals, and geometry helpers.
@@ -547,45 +574,170 @@ const apiHighlighter = ViewPlugin.fromClass(
   { decorations: (v) => v.decorations },
 );
 
+const editorExtensions = [
+  lineNumbers(),
+  history(),
+  indentOnInput(),
+  bracketMatching(),
+  highlightActiveLine(),
+  syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+  javascript(),
+  apiHighlighter,
+  keymap.of([...defaultKeymap, ...historyKeymap]),
+  EditorView.theme({
+    "&": { backgroundColor: "#ffffff", color: "#1f1f1f" },
+    ".cm-content": { caretColor: "#000" },
+    ".cm-gutters": {
+      backgroundColor: "#f5f5f5",
+      color: "#9a9a9a",
+      border: "none",
+      borderRight: "1px solid #e5e5e5",
+    },
+    ".cm-activeLine": { backgroundColor: "#f0f4ff" },
+    ".cm-activeLineGutter": { backgroundColor: "#e8eefc" },
+    ".cm-api-fn": { color: "#0a7c7c", fontWeight: "600" },
+    ".cm-api-global": { color: "#8a2bb8", fontWeight: "600" },
+  }),
+  EditorView.updateListener.of((u) => {
+    if (u.docChanged) {
+      const code = u.state.doc.toString();
+      filesState.files[filesState.active] = code;
+      saveFiles();
+      renderDebounced(code);
+    }
+  }),
+];
+
 const view = new EditorView({
   parent: document.getElementById("editor") as HTMLDivElement,
   state: EditorState.create({
-    doc: initialCode,
-    extensions: [
-      lineNumbers(),
-      history(),
-      indentOnInput(),
-      bracketMatching(),
-      highlightActiveLine(),
-      syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
-      javascript(),
-      apiHighlighter,
-      keymap.of([...defaultKeymap, ...historyKeymap]),
-      EditorView.theme({
-        "&": { backgroundColor: "#ffffff", color: "#1f1f1f" },
-        ".cm-content": { caretColor: "#000" },
-        ".cm-gutters": {
-          backgroundColor: "#f5f5f5",
-          color: "#9a9a9a",
-          border: "none",
-          borderRight: "1px solid #e5e5e5",
-        },
-        ".cm-activeLine": { backgroundColor: "#f0f4ff" },
-        ".cm-activeLineGutter": { backgroundColor: "#e8eefc" },
-        ".cm-api-fn": { color: "#0a7c7c", fontWeight: "600" },
-        ".cm-api-global": { color: "#8a2bb8", fontWeight: "600" },
-      }),
-      EditorView.updateListener.of((u) => {
-        if (u.docChanged) {
-          onChange(u.state.doc.toString());
-        }
-      }),
-    ],
+    doc: filesState.files[filesState.active],
+    extensions: editorExtensions,
   }),
 });
 
+// Tab UI.
+const tabsEl = document.getElementById("tabs") as HTMLDivElement;
+
+function renderTabs() {
+  tabsEl.innerHTML = "";
+  for (const name of Object.keys(filesState.files)) {
+    const tab = document.createElement("div");
+    tab.className = "tab" + (name === filesState.active ? " active" : "");
+
+    const label = document.createElement("span");
+    label.className = "tab-label";
+    label.textContent = name;
+    label.addEventListener("click", () => activateTab(name));
+    label.addEventListener("dblclick", () => renameTab(name));
+    tab.appendChild(label);
+
+    const close = document.createElement("button");
+    close.className = "tab-close";
+    close.textContent = "×";
+    close.title = "Close";
+    close.addEventListener("click", (e) => {
+      e.stopPropagation();
+      closeTab(name);
+    });
+    tab.appendChild(close);
+
+    tabsEl.appendChild(tab);
+  }
+  const plus = document.createElement("button");
+  plus.className = "tab-plus";
+  plus.textContent = "+";
+  plus.title = "New file";
+  plus.addEventListener("click", () => newTab());
+  tabsEl.appendChild(plus);
+}
+
+function activateTab(name: string) {
+  if (!(name in filesState.files) || name === filesState.active) return;
+  filesState.active = name;
+  saveFiles();
+  view.setState(
+    EditorState.create({
+      doc: filesState.files[name],
+      extensions: editorExtensions,
+    }),
+  );
+  renderTabs();
+  render(filesState.files[name]);
+}
+
+function normalizeName(raw: string): string {
+  const n = raw.trim();
+  return n.endsWith(".js") ? n : n + ".js";
+}
+
+function newTab() {
+  let i = 1;
+  let suggested = `scratch${i}.js`;
+  while (suggested in filesState.files) {
+    i++;
+    suggested = `scratch${i}.js`;
+  }
+  const raw = prompt("New file name (.js)", suggested);
+  if (raw == null) return;
+  const name = normalizeName(raw);
+  if (!name || name === ".js") return;
+  if (name in filesState.files) {
+    alert(`File "${name}" already exists.`);
+    return;
+  }
+  filesState.files[name] = "";
+  filesState.active = name;
+  saveFiles();
+  renderTabs();
+  view.setState(
+    EditorState.create({ doc: "", extensions: editorExtensions }),
+  );
+  render("");
+}
+
+function renameTab(name: string) {
+  const raw = prompt("Rename file", name);
+  if (raw == null) return;
+  const next = normalizeName(raw);
+  if (!next || next === ".js" || next === name) return;
+  if (next in filesState.files) {
+    alert(`File "${next}" already exists.`);
+    return;
+  }
+  // Preserve insertion order by rebuilding the files map.
+  const rebuilt: Record<string, string> = {};
+  for (const k of Object.keys(filesState.files)) {
+    rebuilt[k === name ? next : k] = filesState.files[k];
+  }
+  filesState.files = rebuilt;
+  if (filesState.active === name) filesState.active = next;
+  saveFiles();
+  renderTabs();
+}
+
+function closeTab(name: string) {
+  if (!(name in filesState.files)) return;
+  delete filesState.files[name];
+  const remaining = Object.keys(filesState.files);
+  if (remaining.length === 0) {
+    filesState.files["main.js"] = "";
+    filesState.active = "main.js";
+  } else if (filesState.active === name) {
+    filesState.active = remaining[0];
+  }
+  saveFiles();
+  renderTabs();
+  const code = filesState.files[filesState.active];
+  view.setState(
+    EditorState.create({ doc: code, extensions: editorExtensions }),
+  );
+  render(code);
+}
+
+renderTabs();
 // initial render (not debounced)
-render(initialCode);
+render(filesState.files[filesState.active]);
 
 // Buttons
 function currentSvgString(): string {
@@ -602,6 +754,12 @@ function download(filename: string, blob: Blob) {
   a.remove();
   URL.revokeObjectURL(url);
 }
+
+document.getElementById("download-source")!.addEventListener("click", () => {
+  const code = filesState.files[filesState.active] ?? "";
+  const blob = new Blob([code], { type: "text/javascript;charset=utf-8" });
+  download(filesState.active, blob);
+});
 
 document.getElementById("copy-svg")!.addEventListener("click", async () => {
   try {

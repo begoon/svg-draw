@@ -17,10 +17,17 @@ Open <http://localhost:3000>.
 
 ## Editor features
 
-- Auto re-render ~200 ms after each keystroke.
-- Code persists to `localStorage` on every change.
-- Invalid JS shows an error in the status bar; the last good SVG stays on screen.
+- Multi-file tabs (each tab is a `.js` file with a unique name). Click a tab
+  to switch, click `+` to create a new file, `×` to close one, double-click
+  the tab label to rename. The active tab is what renders to SVG.
+- Every keystroke persists all tabs to `localStorage`. Re-render of the
+  active tab is debounced ~200 ms.
+- Invalid JS shows an error in the status bar; the last good SVG stays on
+  screen.
+- API names and globals are highlighted in the editor (drawing/geometry
+  functions in teal, `AREA`/`STRIDE`/`ZERO` in purple).
 - Buttons:
+  - **Download source** — saves the active tab as its `.js` file.
   - **Copy SVG** — copies current SVG markup to the clipboard.
   - **Download .svg** — saves as a `.svg` file.
   - **Download .png** — rasterizes at 2× on a white background.
