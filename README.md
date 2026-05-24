@@ -58,6 +58,23 @@ bun run dev      # or: bun --hot ./index.ts
 Open <http://localhost:3000>, or use the hosted build at
 <https://begoon.github.io/svg-draw>.
 
+## Deploy to GitHub Pages
+
+A [`Justfile`](./Justfile) exposes the common tasks:
+
+```bash
+just            # list recipes
+just dev        # local dev server
+just build      # bundle into ./docs (minified, no source maps)
+just serve-built  # build, then serve ./docs at http://localhost:8080
+```
+
+GitHub Pages serves the `docs/` folder of the `main` branch (one-time
+setup: repo → **Settings** → **Pages** → "Deploy from a branch" → branch
+`main`, folder `/docs`). After `just build`, commit and push `docs/`
+and the live demo at <https://begoon.github.io/svg-draw> updates within
+a minute or two.
+
 ## Editor features
 
 - Multi-file tabs (each tab is a `.js` file with a unique name). Click a tab
