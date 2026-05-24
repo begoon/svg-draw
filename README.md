@@ -158,8 +158,9 @@ Glyphs are flipped locally so they render upright.
 | `scale`  | `0.7`   | Sub/super font size = `size * scale`.                            |
 | `italic` | `false` | Render in italic (applies to the main text and sub/super).       |
 
-Sub and super are placed after the main text with a small horizontal gap of
-`size * 0.12` so they don't crowd the preceding glyph.
+Sub and super are placed after the main text with a small horizontal gap
+(`size * 0.12` before a superscript, `size * 0.04` before a subscript —
+subs need less because the descender area is mostly empty).
 
 ```js
 text([2, 3], "x");

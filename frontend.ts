@@ -367,13 +367,17 @@ function makeApi(ctx: DrawCtx, state: DrawState) {
       const italic = opts.italic ?? false;
       const small = size * scale;
       const style = italic ? ` font-style="italic"` : "";
-      const gap = size * 0.12;
+      // Small horizontal gap before sub/super so they don't crowd the
+      // main text. Subscripts sit in the descender area, so they need
+      // less gap than superscripts.
+      const supGap = size * 0.12;
+      const subGap = size * 0.04;
       let inner = esc(text);
       if (sup) {
-        inner += `<tspan dx="${gap}" baseline-shift="super" font-size="${small}">${esc(sup)}</tspan>`;
+        inner += `<tspan dx="${supGap}" baseline-shift="super" font-size="${small}">${esc(sup)}</tspan>`;
       }
       if (sub) {
-        inner += `<tspan dx="${gap}" baseline-shift="sub" font-size="${small}">${esc(sub)}</tspan>`;
+        inner += `<tspan dx="${subGap}" baseline-shift="sub" font-size="${small}">${esc(sub)}</tspan>`;
       }
       ctx.parts.push(
         `<text transform="translate(${tx(x)} ${tx(y)}) scale(1 -1)" font-family="sans-serif" font-size="${size}"${style} fill="${stroke}">${inner}</text>`
