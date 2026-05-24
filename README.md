@@ -227,6 +227,37 @@ halfplane([0, 2], [6, 2],
           { side: "left", position: "middle", count: 6, spacing: 30 });
 ```
 
+### `angle90([a1, a2], [b1, b2], opts={})`
+
+Draws a small square at the intersection of two lines to mark a 90° angle.
+One corner of the square sits at the intersection point; the two adjacent
+sides run along the two lines. (Used purely as a visual marker — it doesn't
+verify the lines are actually perpendicular.)
+
+| Option      | Default   | Meaning                                                                                            |
+| ----------- | --------- | -------------------------------------------------------------------------------------------------- |
+| `size`      | `8`       | Side length in raw px.                                                                             |
+| `position`  | `1`       | Which of the 4 quadrants formed by the two lines to draw the square in (`1`, `2`, `3`, or `4`).    |
+| `thickness` | `1`       | Outline thickness.                                                                                 |
+| `color`     | `"black"` | Outline color.                                                                                     |
+
+`position` maps to sign combinations of the two line directions (`+` means
+the direction `a1 → a2` for line 1, `b1 → b2` for line 2):
+
+| position | line 1 direction | line 2 direction |
+| -------- | ---------------- | ---------------- |
+| `1`      | `+`              | `+`              |
+| `2`      | `-`              | `+`              |
+| `3`      | `-`              | `-`              |
+| `4`      | `+`              | `-`              |
+
+```js
+// two perpendicular lines and a right-angle marker
+line([0, 0], [5, 0]);          // along +X
+line([0, 0], [0, 5]);          // along +Y
+angle90([[0, 0], [5, 0]], [[0, 0], [0, 5]], { size: 10, position: 1 });
+```
+
 ### `line_angle(p, angle, length, opts={})`
 
 Draws a line starting at point `p`, at `angle` degrees, of the given `length`.

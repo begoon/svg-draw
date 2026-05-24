@@ -446,6 +446,87 @@ function makeApi(ctx: DrawCtx, state: DrawState) {
       const t = ((b1x - a1x) * dyB - (b1y - a1y) * dxB) / denom;
       return { x: a1x + t * dxA, y: a1y + t * dyA };
     },
+    // angle90([a1, a2], [b1, b2], opts) — draw a small square at the
+    // intersection of two lines indicating a 90° angle. One corner of the
+    // square sits at the intersection point; the other two adjacent sides
+    // run along the two lines.
+    //   opts.size:      side length in raw px (default 8)
+    //   opts.position:  which of the 4 quadrants formed by the two lines
+    //                   to place the square in (1, 2, 3, 4). Default 1.
+    //                   1 = (+line1, +line2)   2 = (-line1, +line2)
+    //                   3 = (-line1, -line2)   4 = (+line1, -line2)
+    //                   where +line means the direction a1->a2 / b1->b2.
+    //   opts.thickness: outline thickness (default 1)
+    //   opts.color:     outline color (default "black")
+    angle90(
+      line1: [Pt, Pt],
+      line2: [Pt, Pt],
+      opts: {
+        size?: number;
+        position?: number;
+        thickness?: number;
+        color?: string;
+      } = {},
+    ) {
+      if (!Array.isArray(line1) || line1.length !== 2 ||
+          !Array.isArray(line2) || line2.length !== 2) {
+        throw new Error("angle90 expects two [p1, p2] line tuples");
+      }
+      const size = opts.size ?? 8;
+      const position = opts.position ?? 1;
+      const thickness = opts.thickness ?? 1;
+      const color = opts.color ?? stroke;
+
+      const [a1x, a1y] = pt(line1[0]);
+      const [a2x, a2y] = pt(line1[1]);
+      const [b1x, b1y] = pt(line2[0]);
+      const [b2x, b2y] = pt(line2[1]);
+
+      const dxA = a2x - a1x, dyA = a2y - a1y;
+      const dxB = b2x - b1x, dyB = b2y - b1y;
+
+      const denom = dxA * dyB - dyA * dxB;
+      if (denom === 0) {
+        throw new Error("angle90: lines are parallel (no intersection)");
+      }
+      const t = ((b1x - a1x) * dyB - (b1y - a1y) * dxB) / denom;
+      const Px = a1x + t * dxA;
+      const Py = a1y + t * dyA;
+
+      const lenA = Math.hypot(dxA, dyA);
+      if (lenA === 0) throw new Error("angle90: line1 endpoints coincide");
+      const uAx = dxA / lenA, uAy = dyA / lenA;
+      const lenB = Math.hypot(dxB, dyB);
+      if (lenB === 0) throw new Error("angle90: line2 endpoints coincide");
+      const uBx = dxB / lenB, uBy = dyB / lenB;
+
+      // `size` is in raw px (viewBox units). Convert to user units so we
+      // can keep coordinate math in the user frame.
+      const us = size / Math.max(state.STRIDE, 1e-9);
+      const sA = position === 2 || position === 3 ? -1 : 1;
+      const sB = position === 3 || position === 4 ? -1 : 1;
+
+      const c0x = Px;
+      const c0y = Py;
+      const c1x = Px + us * sA * uAx;
+      const c1y = Py + us * sA * uAy;
+      const c2x = c1x + us * sB * uBx;
+      const c2y = c1y + us * sB * uBy;
+      const c3x = Px + us * sB * uBx;
+      const c3y = Py + us * sB * uBy;
+
+      const ptsStr = [
+        [c0x, c0y],
+        [c1x, c1y],
+        [c2x, c2y],
+        [c3x, c3y],
+      ]
+        .map(([x, y]) => `${tx(x)},${tx(y)}`)
+        .join(" ");
+      ctx.parts.push(
+        `<polygon points="${ptsStr}" stroke="${esc(color)}" stroke-width="${thickness}" fill="none" />`
+      );
+    },
     // normal(a, b, over) — foot of perpendicular from `over` to the line
     // through a and b. The returned point P is on line a-b, and the segment
     // [over, P] meets line a-b at 90 degrees.
@@ -524,6 +605,7 @@ function buildSvg(userCode: string): string {
     "y_at",
     "cross",
     "normal",
+    "angle90",
     "__config",
     `with (__config) {\n${userCode}\n}`
   );
@@ -542,6 +624,7 @@ function buildSvg(userCode: string): string {
     api.y_at,
     api.cross,
     api.normal,
+    api.angle90,
     config
   );
 
@@ -711,6 +794,7 @@ const API_FNS = new Set([
   "y_at",
   "cross",
   "normal",
+  "angle90",
 ]);
 const API_GLOBALS = new Set(["AREA", "STRIDE", "ZERO"]);
 
