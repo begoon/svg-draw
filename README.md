@@ -19,15 +19,34 @@ text. Coding a figure as a few lines of JavaScript means:
 
 - The figure is reproducible and diffable — you can change a label or a
   point and re-render in a few hundred milliseconds.
-- Construction lines, axis labels, hatching, half-plane markers,
-  right-angle markers, perpendicular projections, and arrows are all one
-  function call each, with a coordinate system that matches how the
-  figure is described in prose.
 - The output is plain SVG (and PNG if you need a raster), so it drops
   straight into a LaTeX or Markdown document.
 
-The drawing API in `frontend.ts` is the entire vocabulary; everything
-in the editor is just JavaScript that uses it.
+More importantly, the playground provides an API with convenience
+functions that are specifically chosen to simplify drawing the kind of
+diagrams that show up in a dissertation, **without doing the laborious
+geometric arithmetic yourself**:
+
+- `cross([a1, a2], [b1, b2])` — point where two lines intersect.
+- `normal([a, b], p)` — foot of perpendicular from a point onto a line.
+- `on(a, b, t)`, `x_at(a, b, Y)`, `y_at(a, b, X)` — lerp along a
+  segment, or pick the x/y where a line crosses a given coordinate.
+- `line_angle(p, angle, length)` — draw a segment from a point at a
+  given angle, and get the endpoint back so you can chain.
+- `halfplane`, `angle90`, `fill` (hatched polygons), `arrow`, `square`,
+  `rect`, `text` (with sub/super/italic) — the conventional figure
+  vocabulary as one-line calls.
+- A grid-style coordinate system (`AREA`, `STRIDE`, `ZERO`) so you can
+  place objects in "cells" instead of pixels, and switch back to pixels
+  any time mid-script.
+- Lines accept multiple points (polyline) and optional `before` /
+  `after` extensions, and inline `halfplane` markers, so the
+  construction-line plumbing of a figure stays a single call instead
+  of a dozen.
+
+You write a few dozen lines that read like a description of the figure;
+the API handles the trig, the projection math, the hatching tiles, the
+arrowheads, and the SVG output.
 
 ## Install & run
 
