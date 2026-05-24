@@ -3,8 +3,31 @@
 A small Bun + CodeMirror playground for drawing SVG programmatically.
 Left pane: a JavaScript editor. Right pane: the live SVG render.
 
+**Live demo:** <https://begoon.github.io/svg-draw>
+
+![Screenshot of the playground](./drawing.png)
+
 Coordinates are math-style: `(0, 0)` is the bottom-left of the canvas,
 y increases upward.
+
+## Why
+
+This started as a tool to author the geometric illustrations for a
+dissertation. Drawing the same figure repeatedly in a vector editor is
+slow and the result is hard to keep consistent across iterations of the
+text. Coding a figure as a few lines of JavaScript means:
+
+- The figure is reproducible and diffable — you can change a label or a
+  point and re-render in a few hundred milliseconds.
+- Construction lines, axis labels, hatching, half-plane markers,
+  right-angle markers, perpendicular projections, and arrows are all one
+  function call each, with a coordinate system that matches how the
+  figure is described in prose.
+- The output is plain SVG (and PNG if you need a raster), so it drops
+  straight into a LaTeX or Markdown document.
+
+The drawing API in `frontend.ts` is the entire vocabulary; everything
+in the editor is just JavaScript that uses it.
 
 ## Install & run
 
@@ -13,7 +36,8 @@ bun install
 bun run dev      # or: bun --hot ./index.ts
 ```
 
-Open <http://localhost:3000>.
+Open <http://localhost:3000>, or use the hosted build at
+<https://begoon.github.io/svg-draw>.
 
 ## Editor features
 
