@@ -441,6 +441,21 @@ function makeApi(ctx: DrawCtx, state: DrawState) {
       const t = ((b1x - a1x) * dyB - (b1y - a1y) * dxB) / denom;
       return { x: a1x + t * dxA, y: a1y + t * dyA };
     },
+    // normal(a, b, over) — foot of perpendicular from `over` to the line
+    // through a and b. The returned point P is on line a-b, and the segment
+    // [over, P] meets line a-b at 90 degrees.
+    normal(a: Pt, b: Pt, over: Pt): { x: number; y: number } {
+      const [ax, ay] = pt(a);
+      const [bx, by] = pt(b);
+      const [ox, oy] = pt(over);
+      const dx = bx - ax, dy = by - ay;
+      const len2 = dx * dx + dy * dy;
+      if (len2 === 0) {
+        throw new Error("normal: a and b must be distinct points");
+      }
+      const t = ((ox - ax) * dx + (oy - ay) * dy) / len2;
+      return { x: ax + t * dx, y: ay + t * dy };
+    },
     // _fill(p1, p2, ..., pN, opts?) — variadic points + optional opts.
     _fill(...args: any[]) {
       const flat: number[] = [];
@@ -503,6 +518,7 @@ function buildSvg(userCode: string): string {
     "x_at",
     "y_at",
     "cross",
+    "normal",
     "__config",
     `with (__config) {\n${userCode}\n}`
   );
@@ -520,6 +536,7 @@ function buildSvg(userCode: string): string {
     api.x_at,
     api.y_at,
     api.cross,
+    api.normal,
     config
   );
 
@@ -634,6 +651,7 @@ const API_FNS = new Set([
   "x_at",
   "y_at",
   "cross",
+  "normal",
 ]);
 const API_GLOBALS = new Set(["AREA", "STRIDE", "ZERO"]);
 

@@ -260,6 +260,7 @@ return a number.
 | `x_at(a, b, Y)`                  | `number` | The `x` where the line through `a` and `b` crosses `Y`.                                                     |
 | `y_at(a, b, X)`                  | `number` | The `y` where the line through `a` and `b` crosses `X`.                                                     |
 | `cross([a1, a2], [b1, b2])`      | `{x, y}` | Intersection of the line through `a1,a2` and the line through `b1,b2` (infinite lines). Throws if parallel. |
+| `normal(a, b, over)`             | `{x, y}` | Foot of perpendicular from `over` onto line `a-b`. `[over, P]` meets line `a-b` at 90°.                     |
 
 ```js
 const A = { x: 0, y: 0 };
@@ -272,6 +273,11 @@ const yWhereX2 = y_at(A, B, 2);     // 3
 // intersection of two lines
 const P = cross([[0, 0], [4, 4]], [[0, 4], [4, 0]]);   // { x: 2, y: 2 }
 circle(P, 4, { fill: "red" });
+
+// drop a perpendicular from C onto line a-b
+const C = { x: 1, y: 5 };
+const F = normal(A, B, C);     // F is on line A-B
+line(C, F, { thickness: 1, color: "#888" });
 
 line(A, on(A, B, 0.9), { halfplane: { position: 1.0 } });
 ```
