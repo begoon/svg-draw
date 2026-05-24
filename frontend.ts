@@ -527,17 +527,20 @@ function makeApi(ctx: DrawCtx, state: DrawState) {
         `<polygon points="${ptsStr}" stroke="${esc(color)}" stroke-width="${thickness}" fill="none" />`
       );
     },
-    // normal(a, b, over) — foot of perpendicular from `over` to the line
+    // normal([a, b], p) — foot of perpendicular from `p` to the line
     // through a and b. The returned point P is on line a-b, and the segment
-    // [over, P] meets line a-b at 90 degrees.
-    normal(a: Pt, b: Pt, over: Pt): { x: number; y: number } {
-      const [ax, ay] = pt(a);
-      const [bx, by] = pt(b);
-      const [ox, oy] = pt(over);
+    // [p, P] meets line a-b at 90 degrees.
+    normal(line: [Pt, Pt], p: Pt): { x: number; y: number } {
+      if (!Array.isArray(line) || line.length !== 2) {
+        throw new Error("normal expects a [a, b] line tuple");
+      }
+      const [ax, ay] = pt(line[0]);
+      const [bx, by] = pt(line[1]);
+      const [ox, oy] = pt(p);
       const dx = bx - ax, dy = by - ay;
       const len2 = dx * dx + dy * dy;
       if (len2 === 0) {
-        throw new Error("normal: a and b must be distinct points");
+        throw new Error("normal: line endpoints coincide");
       }
       const t = ((ox - ax) * dx + (oy - ay) * dy) / len2;
       return { x: ax + t * dx, y: ay + t * dy };
