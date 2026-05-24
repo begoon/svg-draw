@@ -173,9 +173,18 @@ function makeApi(ctx: DrawCtx, state: DrawState) {
     // line(p1, p2, ..., pN, opts?) — straight line for N=2, polyline for N>2.
     //   opts.thickness: stroke width, raw px (default 1)
     //   opts.color:     stroke color (default "black")
-    //   opts.halfplane: only honored when N=2; ignored for polylines.
+    //   opts.before:    extend the line beyond p1, by this many user units,
+    //                   along the direction (p1 - p2). Default 0.
+    //   opts.after:     extend the line beyond pN, by this many user units,
+    //                   along the direction (pN - p(N-1)). Default 0.
+    //   opts.halfplane: only honored when the user passed exactly N=2 points;
+    //                   uses the user's original p1/p2 (extensions ignored).
     line(...args: any[]) {
-      let opts: StrokeOpts & { halfplane?: HalfplaneOpts } = {};
+      let opts: StrokeOpts & {
+        halfplane?: HalfplaneOpts;
+        before?: number;
+        after?: number;
+      } = {};
       const tail = args[args.length - 1];
       if (tail !== undefined && !isPt(tail) && typeof tail === "object") {
         opts = args.pop();
@@ -187,6 +196,35 @@ function makeApi(ctx: DrawCtx, state: DrawState) {
         if (!isPt(p)) throw new Error("line expects points as [x,y] or {x,y}");
         return pt(p);
       });
+
+      const userN = pts2.length;
+      const originalFirst = pts2[0];
+      const originalLast = pts2[userN - 1];
+
+      // Extend the polyline at the ends if requested. Extensions are in
+      // user coordinates and add extra path vertices, so the drawn line
+      // stays continuous.
+      const before = opts.before ?? 0;
+      const after = opts.after ?? 0;
+      if (before > 0) {
+        const [x0, y0] = pts2[0];
+        const [x1, y1] = pts2[1];
+        const dx = x0 - x1, dy = y0 - y1;
+        const d = Math.hypot(dx, dy);
+        if (d > 0) {
+          pts2.unshift([x0 + (dx / d) * before, y0 + (dy / d) * before]);
+        }
+      }
+      if (after > 0) {
+        const [xN, yN] = pts2[pts2.length - 1];
+        const [xP, yP] = pts2[pts2.length - 2];
+        const dx = xN - xP, dy = yN - yP;
+        const d = Math.hypot(dx, dy);
+        if (d > 0) {
+          pts2.push([xN + (dx / d) * after, yN + (dy / d) * after]);
+        }
+      }
+
       const t = opts.thickness ?? 1;
       const c = opts.color ?? stroke;
       if (pts2.length === 2) {
@@ -194,7 +232,6 @@ function makeApi(ctx: DrawCtx, state: DrawState) {
         ctx.parts.push(
           `<line x1="${tx(x1)}" y1="${tx(y1)}" x2="${tx(x2)}" y2="${tx(y2)}" stroke="${esc(c)}" stroke-width="${t}" stroke-linecap="round" />`
         );
-        if (opts.halfplane) emitHalfplane(x1, y1, x2, y2, opts.halfplane);
       } else {
         const ptsStr = pts2
           .map(([x, y]) => `${tx(x)},${tx(y)}`)
@@ -202,6 +239,11 @@ function makeApi(ctx: DrawCtx, state: DrawState) {
         ctx.parts.push(
           `<polyline points="${ptsStr}" stroke="${esc(c)}" stroke-width="${t}" fill="none" stroke-linecap="round" stroke-linejoin="round" />`
         );
+      }
+
+      if (opts.halfplane && userN === 2) {
+        const [x1, y1] = originalFirst, [x2, y2] = originalLast;
+        emitHalfplane(x1, y1, x2, y2, opts.halfplane);
       }
     },
     // arrow(p1, p2, opts) — line with arrowhead at p2. Arrowhead color
@@ -339,17 +381,24 @@ function makeApi(ctx: DrawCtx, state: DrawState) {
 
     // line_angle(p, angle, length, opts) — line of `length` units from p,
     // at `angle` degrees (0 = +X axis, CCW positive). `length` is in user
-    // coords (scales with STRIDE). Returns the end point as { x, y }.
+    // coords (scales with STRIDE). Returns the end point as { x, y };
+    // `opts.before` / `opts.after` extend the drawn line but do NOT affect
+    // the returned point.
     line_angle(
       p: Pt,
       angle: number,
       length: number,
-      opts?: StrokeOpts & { halfplane?: HalfplaneOpts }
+      opts?: StrokeOpts & {
+        halfplane?: HalfplaneOpts;
+        before?: number;
+        after?: number;
+      },
     ): { x: number; y: number } {
       const [x, y] = pt(p);
       const r = (angle * Math.PI) / 180;
       const x2 = x + length * Math.cos(r);
       const y2 = y + length * Math.sin(r);
+      // before/after are honored inside line() via the same opts.
       api.line({ x, y }, { x: x2, y: y2 }, opts);
       return { x: x2, y: y2 };
     },

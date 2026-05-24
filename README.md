@@ -82,13 +82,18 @@ with rounded joins) for `N>2`. Needs at least 2 points.
 | ----------- | --------- | ------------------------------------------------------------------------------------------------------------- |
 | `thickness` | `1`       | Stroke width.                                                                                                 |
 | `color`     | `"black"` | Stroke color.                                                                                                 |
-| `halfplane` | none      | Only honored when `N=2`. Draws `halfplane(p1, p2, opts.halfplane)` for the single segment. Ignored otherwise. |
+| `before`    | `0`       | Extend the drawn line past `p1` by this many user units, along the direction `(p1 - p2)`.                     |
+| `after`     | `0`       | Extend the drawn line past `pN` by this many user units, along the direction `(pN - p(N-1))`.                 |
+| `halfplane` | none      | Only honored when `N=2`. Uses the user's original `p1`/`p2` (extensions ignored).                             |
 
 ```js
 // straight line
 line([0, 0], [5, 5]);
 line([0, 0], [5, 5], { thickness: 2 });
 line({ x: 0, y: 0 }, { x: 5, y: 5 }, { color: "#0044aa", thickness: 2 });
+
+// extend past both endpoints by 1 unit each
+line([0, 0], [5, 5], { before: 1, after: 1 });
 
 // line + halfplane in one call (only with two points)
 line(Z, C2, { thickness: 1, halfplane: { position: 0.9, angle: 135 } });
@@ -228,16 +233,18 @@ Draws a line starting at point `p`, at `angle` degrees, of the given `length`.
 `angle: 90` points up in math coords). `length` is in user coordinates — it
 scales with `STRIDE`.
 
-Accepts the same `opts` as `line` (`thickness`, `color`, `halfplane`).
-Returns the end point as `{ x, y }`, so it can be chained.
+Accepts the same `opts` as `line` (`thickness`, `color`, `halfplane`,
+`before`, `after`). Returns the end point as `{ x, y }`, so it can be
+chained. `before` / `after` extend the drawn line but do **not** affect
+the returned point.
 
 ```js
 line_angle({ x: 0, y: 0 }, 45, 5);
 line_angle([2, 2], 90, 3, { color: "red", thickness: 2 });
 line_angle([0, 0], 30, 6, { halfplane: { position: 0.9, angle: 135 } });
 
-// chain off the returned end point
-const tip = line_angle([0, 0], 45, 5);
+// drawn line is extended by 1 unit on each side, but tip is still at length 5
+const tip = line_angle([0, 0], 45, 5, { before: 1, after: 1 });
 circle(tip, 4, { fill: "red" });
 ```
 
