@@ -7,7 +7,12 @@ import {
   Decoration,
 } from "@codemirror/view";
 import type { DecorationSet, ViewUpdate } from "@codemirror/view";
-import { EditorState, RangeSetBuilder } from "@codemirror/state";
+import {
+  EditorState,
+  RangeSetBuilder,
+  StateEffect,
+  StateField,
+} from "@codemirror/state";
 import { javascript } from "@codemirror/lang-javascript";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import {
@@ -566,6 +571,55 @@ const statusEl = document.getElementById("status") as HTMLDivElement;
 
 let lastGoodSvg: string = "";
 
+// Calibrate the line offset that `new Function(body)` reports in stack traces.
+// Chrome wraps the body inside a synthetic `function anonymous(...) { body }`
+// so error lines are shifted by a few. We detect the shift once by throwing
+// from a known position and observing what line the engine reports.
+let FN_LINE_OFFSET = 0;
+try {
+  new Function("throw new Error('CAL')")();
+} catch (e: any) {
+  const m = (e && e.stack || "").match(/<anonymous>:(\d+):/);
+  if (m) FN_LINE_OFFSET = Number(m[1]) - 1;
+}
+
+// We further wrap user code as `with (__config) {\nUSER\n}` — so user line N
+// corresponds to body line (N + 1). Combined offset relative to the
+// anonymous function: user line N -> anonymous line (N + 1 + FN_LINE_OFFSET).
+function extractUserLine(err: any): number | null {
+  const stack: string = (err && err.stack) || "";
+  const m = stack.match(/<anonymous>:(\d+):/);
+  if (!m) return null;
+  const userLine = Number(m[1]) - 1 - FN_LINE_OFFSET;
+  return userLine >= 1 ? userLine : null;
+}
+
+// CodeMirror effect + state field for the red error-line decoration.
+const setErrorLine = StateEffect.define<number | null>();
+const errorLineField = StateField.define<DecorationSet>({
+  create() {
+    return Decoration.none;
+  },
+  update(deco, tr) {
+    let next = deco.map(tr.changes);
+    for (const e of tr.effects) {
+      if (e.is(setErrorLine)) {
+        const v = e.value;
+        if (v == null || v < 1 || v > tr.state.doc.lines) {
+          next = Decoration.none;
+        } else {
+          const line = tr.state.doc.line(v);
+          next = Decoration.set([
+            Decoration.line({ class: "cm-error-line" }).range(line.from),
+          ]);
+        }
+      }
+    }
+    return next;
+  },
+  provide: (f) => EditorView.decorations.from(f),
+});
+
 function render(code: string) {
   try {
     const svg = buildSvg(code);
@@ -573,9 +627,14 @@ function render(code: string) {
     lastGoodSvg = svg;
     statusEl.className = "status ok";
     statusEl.textContent = "ok";
+    view.dispatch({ effects: setErrorLine.of(null) });
   } catch (e) {
+    const userLine = extractUserLine(e);
+    const msg = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
     statusEl.className = "status err";
-    statusEl.textContent = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+    statusEl.textContent =
+      userLine != null ? `line ${userLine}: ${msg}` : msg;
+    view.dispatch({ effects: setErrorLine.of(userLine) });
     // keep previous render
   }
 }
@@ -705,6 +764,7 @@ const editorExtensions = [
   syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
   javascript(),
   apiHighlighter,
+  errorLineField,
   keymap.of([...defaultKeymap, ...historyKeymap]),
   EditorView.theme({
     "&": { backgroundColor: "#ffffff", color: "#1f1f1f" },
@@ -719,6 +779,7 @@ const editorExtensions = [
     ".cm-activeLineGutter": { backgroundColor: "#e8eefc" },
     ".cm-api-fn": { color: "#0a7c7c", fontWeight: "600" },
     ".cm-api-global": { color: "#8a2bb8", fontWeight: "600" },
+    ".cm-error-line": { backgroundColor: "rgba(255, 80, 80, 0.18)" },
   }),
   EditorView.updateListener.of((u) => {
     if (u.docChanged) {

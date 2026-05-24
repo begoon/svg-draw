@@ -23,8 +23,9 @@ Open <http://localhost:3000>.
   to SVG.
 - Every keystroke persists all tabs to `localStorage`. Re-render of the
   active tab is debounced ~200 ms.
-- Invalid JS shows an error in the status bar; the last good SVG stays on
-  screen.
+- Invalid JS shows an error in the status bar (with a line number when one
+  can be extracted from the runtime stack); the offending line is
+  highlighted in light red, and the last good SVG stays on screen.
 - API names and globals are highlighted in the editor (drawing/geometry
   functions in teal, `AREA`/`STRIDE`/`ZERO` in purple).
 - Buttons:
