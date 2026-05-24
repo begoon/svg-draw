@@ -198,8 +198,6 @@ function makeApi(ctx: DrawCtx, state: DrawState) {
       });
 
       const userN = pts2.length;
-      const originalFirst = pts2[0];
-      const originalLast = pts2[userN - 1];
 
       // Extend the polyline at the ends if requested. Extensions are in
       // user coordinates and add extra path vertices, so the drawn line
@@ -242,7 +240,10 @@ function makeApi(ctx: DrawCtx, state: DrawState) {
       }
 
       if (opts.halfplane && userN === 2) {
-        const [x1, y1] = originalFirst, [x2, y2] = originalLast;
+        // Use the extended endpoints so halfplane.position spans the full
+        // drawn line (before + segment + after).
+        const [x1, y1] = pts2[0];
+        const [x2, y2] = pts2[pts2.length - 1];
         emitHalfplane(x1, y1, x2, y2, opts.halfplane);
       }
     },

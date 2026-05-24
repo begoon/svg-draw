@@ -84,7 +84,7 @@ with rounded joins) for `N>2`. Needs at least 2 points.
 | `color`     | `"black"` | Stroke color.                                                                                                 |
 | `before`    | `0`       | Extend the drawn line past `p1` by this many user units, along the direction `(p1 - p2)`.                     |
 | `after`     | `0`       | Extend the drawn line past `pN` by this many user units, along the direction `(pN - p(N-1))`.                 |
-| `halfplane` | none      | Only honored when `N=2`. Uses the user's original `p1`/`p2` (extensions ignored).                             |
+| `halfplane` | none      | Only honored when `N=2`. Anchors at the **extended** endpoints — `position` spans the full drawn length.      |
 
 ```js
 // straight line
