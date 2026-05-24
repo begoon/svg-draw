@@ -95,6 +95,9 @@ line([-0.1, 0.4], on([0, 0], Z, 0.4));
 text([0, -0.6], "x", { sub: "min", super: "p", size: 20, italic: true });
 line([0.2, -0.2], [1, 2]);
 
+text([2, -0.6], "x", { sub: "opt", super: "l", size: 20, italic: true });
+line([2.2, -0.2], Z);
+
 text([4, 7], "область начального поиска", { size: 14 });
 text([4, 6.7], "субоптимального решения", { size: 14 });
 
