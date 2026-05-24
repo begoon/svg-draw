@@ -405,9 +405,12 @@ function makeApi(ctx: DrawCtx, state: DrawState) {
     },
 
     // Geometry helpers. Points are [x, y] or {x, y}; results are {x, y}.
-    // on(a, b, p)   — point at fraction p along the segment a->b (lerp).
-    // x_at(a, b, Y) — x of the line a-b at the given Y.
-    // y_at(a, b, X) — y of the line a-b at the given X.
+    // on(a, b, p)            — point at fraction p along the segment a->b.
+    // x_at(a, b, Y)          — x of the line a-b at the given Y.
+    // y_at(a, b, X)          — y of the line a-b at the given X.
+    // cross([a1,a2],[b1,b2]) — intersection of the line through a1,a2
+    //                          and the line through b1,b2 (infinite lines,
+    //                          not segments). Throws if parallel.
     on(a: Pt, b: Pt, p: number): { x: number; y: number } {
       const [ax, ay] = pt(a), [bx, by] = pt(b);
       return { x: ax + p * (bx - ax), y: ay + p * (by - ay) };
@@ -419,6 +422,24 @@ function makeApi(ctx: DrawCtx, state: DrawState) {
     y_at(a: Pt, b: Pt, X: number): number {
       const [ax, ay] = pt(a), [bx, by] = pt(b);
       return ay + ((by - ay) * (X - ax)) / (bx - ax);
+    },
+    cross(line1: [Pt, Pt], line2: [Pt, Pt]): { x: number; y: number } {
+      if (!Array.isArray(line1) || line1.length !== 2 ||
+          !Array.isArray(line2) || line2.length !== 2) {
+        throw new Error("cross expects two [p1, p2] line tuples");
+      }
+      const [a1x, a1y] = pt(line1[0]);
+      const [a2x, a2y] = pt(line1[1]);
+      const [b1x, b1y] = pt(line2[0]);
+      const [b2x, b2y] = pt(line2[1]);
+      const dxA = a2x - a1x, dyA = a2y - a1y;
+      const dxB = b2x - b1x, dyB = b2y - b1y;
+      const denom = dxA * dyB - dyA * dxB;
+      if (denom === 0) {
+        throw new Error("cross: lines are parallel (no unique intersection)");
+      }
+      const t = ((b1x - a1x) * dyB - (b1y - a1y) * dxB) / denom;
+      return { x: a1x + t * dxA, y: a1y + t * dyA };
     },
     // _fill(p1, p2, ..., pN, opts?) — variadic points + optional opts.
     _fill(...args: any[]) {
@@ -481,6 +502,7 @@ function buildSvg(userCode: string): string {
     "on",
     "x_at",
     "y_at",
+    "cross",
     "__config",
     `with (__config) {\n${userCode}\n}`
   );
@@ -497,6 +519,7 @@ function buildSvg(userCode: string): string {
     api.on,
     api.x_at,
     api.y_at,
+    api.cross,
     config
   );
 
@@ -610,6 +633,7 @@ const API_FNS = new Set([
   "on",
   "x_at",
   "y_at",
+  "cross",
 ]);
 const API_GLOBALS = new Set(["AREA", "STRIDE", "ZERO"]);
 
