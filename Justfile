@@ -14,12 +14,14 @@ install:
 dev:
     bun --hot ./index.ts
 
-# Build the static site into ./docs for GitHub Pages.
+# Build a single self-contained docs/index.html for GitHub Pages.
+# Inlines CSS and JS so the entire app is one file.
 # Commit and push the result; GitHub Pages serves from main:/docs.
 build: clean
     bun build ./index.html --outdir docs --minify
+    bun run scripts/inline-html.ts
     @echo ""
-    @echo "Bundled into ./docs"
+    @echo "Bundled into docs/index.html (single file)"
     @echo "  git add docs"
     @echo "  git commit -m 'build: refresh GitHub Pages bundle'"
     @echo "  git push"

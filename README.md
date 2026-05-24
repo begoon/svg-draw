@@ -63,11 +63,16 @@ Open <http://localhost:3000>, or use the hosted build at
 A [`Justfile`](./Justfile) exposes the common tasks:
 
 ```bash
-just            # list recipes
-just dev        # local dev server
-just build      # bundle into ./docs (minified, no source maps)
+just              # list recipes
+just dev          # local dev server
+just build        # bundle into a single docs/index.html
 just serve-built  # build, then serve ./docs at http://localhost:8080
 ```
+
+`just build` runs `bun build` and then a small post-processing script
+(`scripts/inline-html.ts`) that inlines the emitted CSS and JS into
+`docs/index.html` and removes the now-redundant asset files. The result
+is a single self-contained ~420 KB HTML file — no other files to ship.
 
 GitHub Pages serves the `docs/` folder of the `main` branch (one-time
 setup: repo → **Settings** → **Pages** → "Deploy from a branch" → branch
