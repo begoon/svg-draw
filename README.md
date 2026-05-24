@@ -333,4 +333,9 @@ index.ts        # Bun.serve entry, HTML import
 index.html      # page shell
 frontend.ts     # CodeMirror setup, draw API, render loop, buttons
 styles.css      # light-theme UI
+examples/       # example .js files (draw-2.5.js is the default starter)
 ```
+
+## License
+
+[MIT](./LICENSE) © Alexander Demin.

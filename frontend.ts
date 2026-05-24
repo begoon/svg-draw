@@ -26,36 +26,9 @@ import {
 const DEFAULT_AREA = 500;
 const STORAGE_KEY = "svg-draw:code";
 
-const STARTER = `// Coordinates: (0,0) is bottom-left, like math.
-//
-// Globals you can reassign at any time:
-//   AREA    (default ${DEFAULT_AREA}) — SVG canvas is AREA x AREA
-//   STRIDE  (default 1) — multiplies every x and y
-//   ZERO    (default 0) — added to every x and y
-// Effect: x -> ZERO + x * STRIDE  (same for y).
-
-AREA = 500;
-STRIDE = 50;
-ZERO = 20;
-
-// axes (in raw units, switch STRIDE back temporarily)
-STRIDE = 1; ZERO = 0;
-arrow([0, 20], [AREA, 20]);
-arrow([20, 0], [20, AREA]);
-
-// 6x6 grid of dots
-STRIDE = 50; ZERO = 20;
-for (let y = 0; y < 6; y++) {
-  for (let x = 0; x < 6; x++) {
-    circle([x, y], 4, { fill: "#000000" });
-  }
-}
-
-// a couple of shapes on the grid
-rect([1, 1], [3, 3], { thickness: 2, fill: "#aaccff" });
-arrow([0, 5], [5, 0], { thickness: 2 });
-text([0, 5], "x", { sub: "1", super: "2", size: 20 });
-`;
+// Inlined at build time by Bun's text loader. Used as the default
+// content for `main.js` when localStorage has nothing for this app.
+import STARTER from "./examples/draw-2.5.js" with { type: "text" };
 
 type SvgPart = string;
 type Pattern = { id: string; svg: string };
